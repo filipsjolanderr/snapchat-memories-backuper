@@ -1,0 +1,4 @@
+pillow>=11.0.0
+moviepy>=2.2.1
+tqdm>=4.67.1
+proglog>=0.1.10
