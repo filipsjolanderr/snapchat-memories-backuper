@@ -2,7 +2,7 @@
 # This script downloads the repository and launches the web UI
 
 Write-Host "==============================================" -ForegroundColor Cyan
-Write-Host " 📸 Snapchat Memories Backuper - Auto Setup" -ForegroundColor Cyan
+Write-Host " Snapchat Memories Backuper - Auto Setup" -ForegroundColor Cyan
 Write-Host "==============================================" -ForegroundColor Cyan
 Write-Host ""
 
@@ -12,7 +12,7 @@ $zipFile = "snapchat-memories-backuper.zip"
 
 # Check if directory already exists
 if (Test-Path $repoName) {
-    Write-Host "⚠️ Directory '$repoName' already exists!" -ForegroundColor Yellow
+    Write-Host "[!] Directory '$repoName' already exists!" -ForegroundColor Yellow
     $overwrite = Read-Host "Do you want to use the existing directory? (Y/n)"
     if ($overwrite -eq "n" -or $overwrite -eq "N") {
         Write-Host "Exiting..." -ForegroundColor Red
@@ -29,7 +29,7 @@ if (Test-Path $repoName) {
         $ProgressPreference = 'SilentlyContinue'  # Suppress progress bar for cleaner output
         Invoke-WebRequest -Uri $zipUrl -OutFile $zipFile -ErrorAction Stop
         
-        Write-Host "✅ Download complete!" -ForegroundColor Green
+        Write-Host "[OK] Download complete!" -ForegroundColor Green
         
         # Extract ZIP file
         Write-Host ""
@@ -44,9 +44,9 @@ if (Test-Path $repoName) {
         # Clean up ZIP file
         Remove-Item -Path $zipFile -Force -ErrorAction SilentlyContinue
         
-        Write-Host "✅ Files extracted successfully!" -ForegroundColor Green
+        Write-Host "[OK] Files extracted successfully!" -ForegroundColor Green
     } catch {
-        Write-Host "❌ Failed to download or extract repository!" -ForegroundColor Red
+        Write-Host "[ERROR] Failed to download or extract repository!" -ForegroundColor Red
         Write-Host "Error: $_" -ForegroundColor Red
         Write-Host ""
         Write-Host "Please try downloading manually from:" -ForegroundColor Yellow
@@ -61,7 +61,7 @@ Set-Location $repoName
 
 # Check if run_ui.bat exists
 if (-not (Test-Path "run_ui.bat")) {
-    Write-Host "❌ run_ui.bat not found in repository!" -ForegroundColor Red
+    Write-Host "[ERROR] run_ui.bat not found in repository!" -ForegroundColor Red
     Write-Host "The repository may not have downloaded correctly." -ForegroundColor Yellow
     pause
     exit 1
@@ -69,8 +69,8 @@ if (-not (Test-Path "run_ui.bat")) {
 
 Write-Host ""
 Write-Host "==============================================" -ForegroundColor Cyan
-Write-Host "✅ Repository ready!" -ForegroundColor Green
-Write-Host "🚀 Launching setup script..." -ForegroundColor Cyan
+Write-Host "[OK] Repository ready!" -ForegroundColor Green
+Write-Host "Launching setup script..." -ForegroundColor Cyan
 Write-Host "==============================================" -ForegroundColor Cyan
 Write-Host ""
 
