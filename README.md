@@ -83,7 +83,7 @@ That's it! The script will:
 
 ---
 
-### 🌐 Step 4: Use the Web UI
+## 🌐 Step 4: Use the Web UI
 
 Once the web interface opens:
 
