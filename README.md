@@ -77,27 +77,6 @@ python -m pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-## 🏗️ Architecture
-
-The tool is built with a modular, object-oriented architecture:
-
-- **`cli.py`**: Command-line interface and argument parsing
-- **`config.py`**: Configuration management
-- **`logger.py`**: Centralized logging system with multiple verbosity levels
-- **`pipeline.py`**: Main pipeline orchestrator
-- **`planner.py`**: Planning operations
-- **`executors.py`**: Execution services:
-  - `ZipService`: ZIP file extraction
-  - `CopyService`: File copying operations
-  - `RenameService`: File renaming operations
-  - `CombineService`: Image/video combining
-- **`download.py`**: Download management
-- **`metadata.py`**: Metadata parsing and writing
-- **`fs.py`**: Filesystem utilities
-- **`stats.py`**: Statistics and counting functions
-- **`utils.py`**: General utilities
-- **`gpu.py`**: GPU detection and configuration
-
 ## 💻 Usage
 
 The tool automatically detects whether your input is an HTML file or folder - no need to specify different commands!
@@ -380,3 +359,24 @@ If processing is slow:
 3. **Use FFmpeg GPU**: `--ffmpeg-gpu` for maximum video processing speed
 4. **Reduce workers if unstable**: If crashes occur, reduce worker counts
 5. **Check disk space**: Ensure enough free space for output files
+
+## 🏗️ Architecture
+
+The tool is built with a modular, object-oriented architecture:
+
+- **`cli.py`**: Command-line interface and argument parsing
+- **`config.py`**: Configuration management
+- **`logger.py`**: Centralized logging system with multiple verbosity levels
+- **`pipeline.py`**: Main pipeline orchestrator
+- **`planner.py`**: Planning operations
+- **`executors.py`**: Execution services:
+  - `ZipService`: ZIP file extraction
+  - `CopyService`: File copying operations
+  - `RenameService`: File renaming operations
+  - `CombineService`: Image/video combining
+- **`download.py`**: Download management
+- **`metadata.py`**: Metadata parsing and writing
+- **`fs.py`**: Filesystem utilities
+- **`stats.py`**: Statistics and counting functions
+- **`utils.py`**: General utilities
+- **`gpu.py`**: GPU detection and configuration
