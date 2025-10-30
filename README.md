@@ -68,19 +68,6 @@ A Python tool to restore and organize Snapchat Memories from exported data. **Re
 - **Option 1**: Install via winget: `winget install Gyan.FFmpeg` (then restart terminal)
 - **Option 2**: Download a build and add its `bin` folder to your PATH
 
-### 🚀 GPU Acceleration (Optional)
-
-The tool automatically detects and uses GPU-accelerated video encoding when available, which can significantly speed up video processing:
-
-**Supported GPU Encoding:**
-
-- **NVIDIA**: NVENC (h264_nvenc) - requires NVIDIA GPU with NVENC support
-- **AMD**: AMF (h264_amf) - requires AMD GPU with AMF support
-- **Intel**: QSV (h264_qsv) - requires Intel GPU with Quick Sync Video
-- **Apple**: VideoToolbox (h264_videotoolbox) - macOS only
-
-**GPU acceleration is enabled by default** and will fall back to CPU encoding if GPU is not available.
-
 ## 🚀 Installation
 
 ### Create a Python virtual environment (recommended)
@@ -262,9 +249,16 @@ The script automatically applies metadata when an HTML file is provided:
 
 ### GPU Acceleration
 
-- **Auto-detected**: GPU is automatically detected and used if available
-- **Force CPU**: `--no-gpu` (if GPU causes issues)
-- **Max Performance**: `--ffmpeg-gpu` (uses GPU for entire pipeline, fastest)
+The tool automatically detects and uses GPU-accelerated video encoding when available, which can significantly speed up video processing:
+
+**Supported GPU Encoding:**
+
+- **NVIDIA**: NVENC (h264_nvenc) - requires NVIDIA GPU with NVENC support
+- **AMD**: AMF (h264_amf) - requires AMD GPU with AMF support
+- **Intel**: QSV (h264_qsv) - requires Intel GPU with Quick Sync Video
+- **Apple**: VideoToolbox (h264_videotoolbox) - macOS only
+
+**GPU acceleration is enabled by default** and will fall back to CPU encoding if GPU is not available.
 
 ## 🔍 Troubleshooting
 
