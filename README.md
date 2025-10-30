@@ -183,8 +183,6 @@ When you provide a `.html` file, the script:
 8. **Applies** metadata (date/location) from HTML to final outputs
 9. **Cleans up** ZIP files and temp folders automatically
 
-> **Note**: Downloaded files are already individual memories, so no combining is needed for them.
-
 ### 📁 Folder Processing Mode (when input is a folder)
 
 When you provide a folder, the script:
