@@ -8,15 +8,16 @@ It works on **Windows, macOS, and Linux**, and you don't need to know anything a
 
 ## 📋 What You Need
 
-Before you start, you just need:
+The setup script will automatically install everything for you! But if you want to check beforehand:
 
-- **Python 3.11+** installed ([Download here](https://www.python.org/downloads))
-  - On Windows: Check ✅ **"Add Python to PATH"** during installation
-  - On macOS/Linux: Usually already installed! Try running `python3 --version` to check
+- **Python 3.11+** - The script will install it automatically if not found
+  - On Windows: Uses `winget` to install Python
+  - On macOS: Uses `brew` to install Python
+  - On Linux: Uses `apt` or `yum` to install Python
+- **FFmpeg** (optional) - The script will offer to install it automatically
+  - Makes video processing faster, but everything works without it
 
-That's it! The setup script handles everything else automatically. ✨
-
-> 💡 **Optional:** FFmpeg makes video processing faster, but it's not required. See [FFmpeg installation guide](#-installing-ffmpeg-for-video-support) below if you want to install it later.
+> 💡 **Note:** The setup scripts automatically detect and install missing dependencies! Just run the setup command and it handles everything.
 
 ---
 
