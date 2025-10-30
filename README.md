@@ -33,7 +33,7 @@ That's it! The setup script handles everything else automatically. ✨
 2. **Copy and paste this ONE command, then press Enter:**
 
 ```powershell
-Invoke-WebRequest -Uri "https://raw.githubusercontent.com/filipsjolanderr/snapchat-memories-backuper/main/setup.ps1" -OutFile "setup.ps1"; .\setup.ps1
+$ProgressPreference = 'SilentlyContinue'; Invoke-WebRequest -Uri "https://raw.githubusercontent.com/filipsjolanderr/snapchat-memories-backuper/main/setup.ps1" -OutFile "setup.ps1" -Encoding UTF8; .\setup.ps1
 ```
 
 That's it! The script will:
