@@ -10,8 +10,9 @@ from .logger import LogLevel
 class AppConfig:
     dry_run: bool = False
     image_workers: int = 16
-    video_workers: int = 16
-    download_workers: int = 16
+    video_workers: int = 8
+    download_workers: int = 4
+    metadata_workers: int = 16
     use_gpu: bool = True
     use_ffmpeg_gpu: bool = True
     verbose: bool = False

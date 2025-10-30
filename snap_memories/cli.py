@@ -68,6 +68,11 @@ def main(
         "--download-workers",
         help="Number of parallel workers for downloads",
     ),
+    metadata_workers: int = typer.Option(
+        8,
+        "--metadata-workers",
+        help="Number of parallel workers for metadata application",
+    ),
     use_gpu: bool = typer.Option(
         True,
         "--use-gpu/--no-gpu",
@@ -134,6 +139,7 @@ def main(
         image_workers=image_workers,
         video_workers=video_workers,
         download_workers=download_workers,
+        metadata_workers=metadata_workers,
         use_gpu=use_gpu,
         use_ffmpeg_gpu=ffmpeg_gpu,
         verbose=verbose,

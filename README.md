@@ -1,382 +1,403 @@
-# Snapchat Memories Backuper
+# 📸 Snapchat Memories Backuper
 
-A Python tool to restore and organize Snapchat Memories from exported data.
+A simple tool to **download, restore, and organize your Snapchat Memories** using the data Snapchat lets you export.
 
-## 📱 Getting Your Snapchat Data
+It works on **Windows, macOS, and Linux**, and you don't need to know anything about coding or Python!
 
-### Step 1: Request Your Data from Snapchat
+---
 
-1. Open Snapchat and go to your **Profile** screen
-2. Tap the ⚙️ **Settings** icon in the top-right corner
-3. Scroll down and select **My Data** under the Account Actions section
-4. When the data request page appears, make sure to check the box for **"Export Your Memories"**
-5. Set the date range to **"All Time"** so that every saved Snap and Story is included
-6. Confirm that your email address is correct (this is where Snapchat will send your download link)
-7. Tap **Submit Request** to begin the process
+## 📋 What You Need
 
-> ⏰ **Note**: Once submitted, Snapchat will prepare your data. You'll receive an email with a download link when your file is ready. This process usually takes 2–3 hours (but can take multiple days).
+Before you start, you just need:
 
-### Step 2: Download Your Snapchat Data
+- **Python 3.11+** installed ([Download here](https://www.python.org/downloads))
+  - On Windows: Check ✅ **"Add Python to PATH"** during installation
+  - On macOS/Linux: Usually already installed! Try running `python3 --version` to check
 
-1. Once you receive the email from Snapchat, click the provided link and download the ZIP file containing your Memories
-2. Create a dedicated folder for your Snapchat data (e.g., "SnapchatData")
-3. Unzip the downloaded file to extract its contents
-4. Inside the extracted folder, locate and open the `index.html` file
-5. Once the page opens in your browser, navigate to the **Memories** section to view all your saved Snaps and Stories
+That's it! The setup script handles everything else automatically. ✨
 
-### Step 3: Get the HTML File
+> 💡 **Optional:** FFmpeg makes video processing faster, but it's not required. See [FFmpeg installation guide](#-installing-ffmpeg-for-video-support) below if you want to install it later.
 
-**🎯 Direct Download Method (Recommended Method)**
+---
 
-- Save the `memories_history.html` file from your Snapchat data export
-- Use this script to download and process all memories automatically
-- **This is the recommended approach** - no manual work needed!
+## 🚀 Quick Start (Just One Command!)
 
-**Alternative: Manual Download Method**
+### 🪟 **Windows**
 
-- Download each memory individually from the browser
-- Organize files in a folder structure
-- Use the traditional processing mode
+1. **Open PowerShell:**
 
-## 🔧 Requirements
+   - Press the **Windows key** (or click Start)
+   - Type **"PowerShell"**
+   - Click **"Windows PowerShell"** (or press Enter)
 
-- **Python 3.9+**
-- **pip packages** (install via `pip install -r requirements.txt`):
-  - `pillow>=11.0.0` (for image processing)
-  - `moviepy>=2.2.1` (for video processing)
-  - `tqdm>=4.67.1` (for progress bars)
-  - `proglog>=0.1.10` (for progress bars)
-  - `piexif>=1.1.3` (for EXIF metadata)
-  - `requests>=2.32.5` (for direct downloads)
-- **FFmpeg** (required for moviepy video writing)
+2. **Copy and paste this ONE command, then press Enter:**
 
-### Installing FFmpeg on Windows
+```powershell
+Invoke-WebRequest -Uri "https://raw.githubusercontent.com/filipsjolanderr/snapchat-memories-backuper/main/setup.ps1" -OutFile "setup.ps1"; .\setup.ps1
+```
 
-- **Option 1**: Install via winget: `winget install Gyan.FFmpeg` (then restart terminal)
-- **Option 2**: Download a build and add its `bin` folder to your PATH
+That's it! The script will:
 
-## 🚀 Installation
+- ✅ Download everything automatically
+- ✅ Install all required packages
+- ✅ Open the web interface in your browser
 
-### Create a Python virtual environment (recommended)
+---
+
+### 🐧 **macOS / Linux**
+
+1. **Open Terminal:**
+
+   - **macOS:** Press `Cmd + Space`, type "Terminal", press Enter
+   - **Linux:** Press `Ctrl + Alt + T` or search for "Terminal" in your applications
+
+2. **Copy and paste this ONE command, then press Enter:**
+
+```bash
+curl -O https://raw.githubusercontent.com/filipsjolanderr/snapchat-memories-backuper/main/setup.sh && chmod +x setup.sh && ./setup.sh
+```
+
+That's it! The script will:
+
+- ✅ Download everything automatically
+- ✅ Install all required packages
+- ✅ Open the web interface in your browser
+
+---
+
+### 🌐 Next: Use the Web UI
+
+Once the web interface opens:
+
+1. **Upload** your `memories_history.html` file
+2. **Choose** where to save your processed memories
+3. **Click** "Start Processing"
+
+Done! 🎉
+
+---
+
+## 🧰 What This Tool Does
+
+This program helps you:
+
+✅ Download all your Snaps and Stories from your official Snapchat data export  
+✅ Fix Snapchat’s messy file names and missing extensions  
+✅ Combine overlay stickers and text back into your photos/videos  
+✅ Recover the correct **date and location metadata** for each memory  
+✅ Automatically organize everything into a nice, clean folder
+
+---
+
+## 📥 Step 1: Request Your Snapchat Data
+
+1. Open your browser (Chrome, Edge, or Safari) and go to:  
+   👉 [https://accounts.snapchat.com](https://accounts.snapchat.com) or use the Snapchat App
+2. Log in with your Snapchat username and password
+3. Click your **profile icon** in the top‑left corner (top‑right in the app)
+4. Choose **Account Settings**
+5. Scroll down and click **My Data**
+6. Check ✅ the box **“Export Your Memories”** and click **"Request Only Memories"**
+7. Under **Date Range**, select **All Time** to include every snap you’ve ever saved
+8. Make sure your email address is correct — Snapchat will send your download link there
+9. Click **Submit**
+
+> ⏳ **Note:** It can take a few hours.  
+> You’ll get an email with a download link once your data is ready.
+
+---
+
+## 💾 Step 2: Download and Extract Your Data
+
+Do this **from a computer or laptop** using Snapchat’s website — **not** from your phone.
+
+1. When you receive the email from Snapchat, click **"click here"**
+2. Click **"See exports"** → then click **"Download"**
+3. Save the ZIP file and **extract** (unzip) it:
+   - On **Windows:** Right‑click → “Extract All...”
+   - On **Mac:** Double‑click the file
+4. Inside the extracted folder, go into the **html** folder and find  
+   **`memories_history.html`** → that’s the important file!
+
+---
+
+## 🪄 Step 3: One‑Click Setup & Launch (Detailed Guide)
+
+> 💡 **Already cloned?** Skip to the launcher section below!
+
+If you haven't cloned yet, see the [Quick Start](#-quick-start-3-steps) section above first.
+
+The easiest way to get started — **just double-click and the web UI opens!**
+
+### 🪟 **Windows**
+
+Just double‑click **`run_ui.bat`**
+
+It automatically:
+
+- ✅ Checks that Python is installed
+- ✅ Creates and activates the virtual environment
+- ✅ Installs all required packages
+- ✅ Checks for FFmpeg
+- ✅ **Opens the beautiful web interface in your browser!**
+
+---
+
+### 🐧 **macOS / Linux**
+
+Run this in your Terminal from the project folder:
+
+```bash
+chmod +x run_ui.sh
+./run_ui.sh
+```
+
+It does the exact same steps automatically and opens the web UI.
+
+---
+
+### 🌐 Using the Web UI
+
+Once the web interface opens:
+
+1. **Upload** your `memories_history.html` file
+2. **Choose** where to save your processed memories
+3. **Configure** performance settings (optional)
+4. **Click** "Start Processing" and watch it work!
+
+The web UI provides:
+
+- 📊 Real-time progress bars
+- ⚙️ Easy configuration options
+- 🎨 Beautiful, user-friendly interface
+- 📁 Simple file/folder selection
+
+That’s it — no command line needed!
+
+---
+
+## 🧩 Alternative: Manual Installation (If You Prefer)
+
+If you prefer to install manually instead of using the one-click launcher:
+
+1. [Install Python 3.11+](https://www.python.org/downloads)
+   - Make sure to check ✅ **Add Python to PATH** on Windows!
+2. Create a virtual environment:
+
+```bash
+python -m venv .venv
+```
+
+Activate it:
+
+- **Windows:**
+  ```powershell
+  .\.venv\Scripts\Activate.ps1
+  ```
+- **macOS/Linux:**
+  ```bash
+  source .venv/bin/activate
+  ```
+
+3. Install dependencies:
+
+```bash
+pip install -r requirements.txt
+```
+
+---
+
+## ▶️ Step 4: Run the Tool
+
+### 🌐 **Option A – Web UI (Recommended)**
+
+Just use the one-click launcher from Step 3! The web interface makes everything easy.
+
+---
+
+### 💻 **Option B – Command Line Interface**
+
+If you prefer using the command line:
+
+#### HTML File Mode (Recommended)
+
+```bash
+python -m snap_memories memories_history.html -o output_folder
+```
+
+✅ The tool will:
+
+- Download all your Memories automatically
+- Combine any images or videos with overlays
+- Add the correct date/time and location metadata
+- Save your organized files into `output_folder`
 
 **Windows (PowerShell):**
 
 ```powershell
-python -m venv .venv
 .\.venv\Scripts\Activate.ps1
-python -m pip install --upgrade pip
-pip install -r requirements.txt
-```
-
-**macOS/Linux (bash/zsh):**
-
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-python -m pip install --upgrade pip
-pip install -r requirements.txt
-```
-
-## 💻 Usage
-
-The tool automatically detects whether your input is an HTML file or folder - no need to specify different commands!
-
-### 🎯 Basic Usage
-
-```bash
-# Download from HTML file (auto-detected)
 python -m snap_memories memories_history.html -o output_folder
+```
 
-# Process folder (auto-detected)
-python -m snap_memories ./memories -o output_folder
+**macOS/Linux:**
 
-# With metadata file (for folder processing)
+```bash
+source .venv/bin/activate
+python -m snap_memories memories_history.html -o output_folder
+```
+
+---
+
+#### Folder Mode
+
+If you already downloaded the memories manually into a folder:
+
+```bash
 python -m snap_memories ./memories -o output_folder -m memories_history.html
 ```
 
-### 📚 Command Reference
+---
 
-#### Required Arguments
+#### ⚙️ Optional Settings
 
-- `INPUT_PATH`: Path to HTML file (`memories_history.html`) or folder containing memories
+| Option                  | Description                                              |
+| ----------------------- | -------------------------------------------------------- |
+| `--dry-run`             | Preview what will happen without actually making changes |
+| `-v`                    | Verbose mode (see detailed progress)                     |
+| `--no-gpu`              | Disable GPU acceleration if needed                       |
+| `--download-workers 64` | Faster downloads (if you have good internet)             |
 
-#### Options
-
-**Input/Output:**
-
-- `-o, --output PATH`: Specify custom output folder (default: `output/` relative to input)
-- `-m, --metadata PATH`: Path to `memories_history.html` for metadata (optional, auto-detected when input is HTML)
-
-**Processing:**
-
-- `--dry-run`: Preview all actions without making changes
-- `--image-workers N`: Number of parallel workers for image processing (default: 8)
-- `--video-workers N`: Number of parallel workers for video processing (default: 4)
-- `--download-workers N`: Number of parallel workers for downloads (default: 32)
-
-**GPU:**
-
-- `--use-gpu`: Enable GPU acceleration (default: enabled)
-- `--no-gpu`: Force CPU-only processing
-- `--ffmpeg-gpu`: Use FFmpeg GPU pipeline for maximum performance
-
-**Logging:**
-
-- `-v, --verbose`: Enable verbose output (shows detailed progress)
-- `-q, --quiet`: Suppress all output except errors
-
-### 💡 Examples
+**Example:**
 
 ```bash
-# Download from HTML with verbose output and 64 download workers
 python -m snap_memories memories_history.html -o output -v --download-workers 64
-
-# Process folder with GPU disabled and custom workers
-python -m snap_memories ./memories -o output --no-gpu --image-workers 16 --video-workers 8
-
-# Preview download with quiet mode (only errors shown)
-python -m snap_memories memories_history.html -o output --dry-run -q
-
-# Process with metadata and FFmpeg GPU acceleration
-python -m snap_memories ./memories -o output -m memories_history.html --ffmpeg-gpu
-
-# Get help
-python -m snap_memories --help
 ```
 
-## ⚙️ What It Does
+---
 
-### 🎯 HTML Download Mode (when input is an HTML file)
+## 🎨 Step 5: Sit Back and Let It Work!
 
-When you provide a `.html` file, the script:
+You’ll see progress bars as it:
 
-1. **Downloads** all memories from HTML file URLs (parallel, 32 workers by default)
-2. **Detects** file types automatically (ZIP, JPG, MP4) from server responses
-3. **Fixes** ZIP files with wrong extensions
-4. **Extracts** ZIP files containing main + overlay pairs (if any)
-5. **Copies** standalone MP4 files that don't need combining
-6. **Renames** files without extensions to `.jpg`
-7. **Combines** pairs from ZIP contents only:
-   - `*-main.jpg` + `*-overlay.png` → `<uuid>_combined.jpg` (with EXIF metadata)
-   - `*-main.mp4` + `*-overlay.png` → `<uuid>_combined.mp4` (with MP4 metadata)
-8. **Applies** metadata (date/location) from HTML to final outputs
-9. **Cleans up** ZIP files and temp folders automatically
+- ⬇️ Downloads your files
+- 🗂️ Organizes and renames them
+- 🎞️ Merges overlay images/videos
+- 🗺️ Adds date/time/location metadata
 
-### 📁 Folder Processing Mode (when input is a folder)
+When it’s done, open the **output** folder —  
+you’ll find all your Memories neatly restored and sorted!
 
-When you provide a folder, the script:
+---
 
-1. **Copies** standalone MP4 files to output folder
-2. **Renames** files without extensions to `.jpg`
-3. **Extracts** all `.zip` files found in the input folder
-4. **Renames** unnamed files in extracted ZIPs
-5. **Combines** pairs:
-   - `*-main.jpg` + `*-overlay.png` → `<uuid>_combined.jpg`
-   - `*-main.mp4` + `*-overlay.png` → `<uuid>_combined.mp4`
-6. **Applies** metadata if HTML file is provided with `-m` flag
-7. **Writes** results to output folder (default: `output/` inside input folder)
+## 🧩 Common Issues & Fixes
 
-## 📊 Metadata Support
+| Problem                             | Solution                                               |
+| ----------------------------------- | ------------------------------------------------------ |
+| **FFmpeg not found**                | Install FFmpeg (see below)                             |
+| **Permission denied**               | Try a different output folder or run terminal as admin |
+| **Module not found: snap_memories** | Make sure your virtual environment is active           |
+| **Slow or failing downloads**       | Reduce parallel workers: `--download-workers 8`        |
 
-The script automatically applies metadata when an HTML file is provided:
+---
 
-- **Date/Time**: Original capture date from Snapchat
-- **Location**: GPS coordinates (latitude/longitude) if available
-- **File Format**:
-  - **Images**: EXIF data in JPEG files
-  - **Videos**: MP4 metadata atoms
+## 🎬 Installing FFmpeg (for Video Support)
 
-### Metadata Sources
+If you don’t have FFmpeg yet, install it as follows:
 
-- **🎯 HTML Mode**: Automatically uses the HTML file for metadata
-- **📁 Folder Mode**: Use `-m` flag to specify HTML file: `python -m snap_memories process ./memories -m memories_history.html`
+- **Windows:**
+  ```bash
+  winget install Gyan.FFmpeg
+  ```
+  Then restart your terminal.
+- **macOS:**
+  ```bash
+  brew install ffmpeg
+  ```
+- **Linux (Ubuntu/Debian):**
+  ```bash
+  sudo apt install ffmpeg
+  ```
 
-## 🚀 Performance Tuning
+---
 
-### Download Performance
+## ⚡ Optional – GPU Support
 
-- **Default**: 32 parallel downloads
-- **Increase**: `--download-workers 64` (for fast connections)
-- **Decrease**: `--download-workers 8` (for slow/unstable connections)
+If you have a supported GPU, FFmpeg uses it to speed up video processing:
 
-### Image Processing Performance
+- **NVIDIA:** NVENC (`h264_nvenc`)
+- **AMD:** AMF (`h264_amf`)
+- **Intel:** QSV (`h264_qsv`)
+- **Apple:** VideoToolbox (`h264_videotoolbox`)
 
-- **Default**: 8 parallel workers
-- **Increase**: `--image-workers 16` (for many images, more RAM)
-- **Decrease**: `--image-workers 4` (for limited RAM)
+If GPU isn’t available, it automatically uses CPU mode (slower but still fine).
 
-### Video Processing Performance
+---
 
-- **Default**: 4 parallel workers
-- **Increase**: `--video-workers 8` (for many videos, high RAM/CPU)
-- **Decrease**: `--video-workers 1` (for limited resources)
+## 🧠 Advanced: What the Launcher Scripts Do
 
-### GPU Acceleration
+### 📁 `run_ui.bat` (Windows)
 
-The tool automatically detects and uses GPU-accelerated video encoding when available, which can significantly speed up video processing:
+The Windows batch script (`run_ui.bat`) performs these steps:
 
-**Supported GPU Encoding:**
+1. ✅ Checks for Python installation
+2. ✅ Creates virtual environment (`.venv`) if it doesn't exist
+3. ✅ Activates the virtual environment
+4. ✅ Upgrades pip to the latest version
+5. ✅ Installs all required packages from `requirements.txt`
+6. ✅ Checks for FFmpeg (warns if missing)
+7. ✅ Launches Streamlit web UI (`streamlit run ui.py`)
 
-- **NVIDIA**: NVENC (h264_nvenc) - requires NVIDIA GPU with NVENC support
-- **AMD**: AMF (h264_amf) - requires AMD GPU with AMF support
-- **Intel**: QSV (h264_qsv) - requires Intel GPU with Quick Sync Video
-- **Apple**: VideoToolbox (h264_videotoolbox) - macOS only
+The web interface automatically opens in your default browser!
 
-**GPU acceleration is enabled by default** and will fall back to CPU encoding if GPU is not available.
+---
 
-## 🔍 Troubleshooting
+### 🐧 `run_ui.sh` (macOS/Linux)
 
-### Common Issues
+The shell script (`run_ui.sh`) does the same steps:
 
-#### ❌ "FFmpeg not found" or "FFmpeg failed"
+1. ✅ Checks for Python 3 installation
+2. ✅ Creates virtual environment (`.venv`) if it doesn't exist
+3. ✅ Activates the virtual environment
+4. ✅ Upgrades pip to the latest version
+5. ✅ Installs all required packages from `requirements.txt`
+6. ✅ Checks for FFmpeg (warns if missing)
+7. ✅ Launches Streamlit web UI (`streamlit run ui.py`)
 
-**Problem**: FFmpeg is not installed or not in PATH
+The web interface automatically opens in your default browser!
 
-**Solutions**:
+---
 
-1. Install FFmpeg:
-   - Windows: `winget install Gyan.FFmpeg` (then restart terminal)
-   - macOS: `brew install ffmpeg`
-   - Linux: `sudo apt install ffmpeg` (Debian/Ubuntu) or `sudo yum install ffmpeg` (RHEL/CentOS)
-2. Verify installation: `ffmpeg -version`
-3. If installed but not found, add FFmpeg `bin` directory to your PATH environment variable
+### 🔄 Running Again Later
 
-#### ❌ "Permission denied" errors
+Once you've run the script once, the virtual environment is created. You can:
 
-**Problem**: Insufficient permissions to create directories or write files
+- **Option 1:** Just run `run_ui.bat` (Windows) or `./run_ui.sh` (macOS/Linux) again — it's smart enough to reuse the existing environment
+- **Option 2:** Manually activate and run:
 
-**Solutions**:
+  ```bash
+  # Windows
+  .\.venv\Scripts\Activate.ps1
+  streamlit run ui.py
 
-1. Run with appropriate permissions (administrator on Windows, sudo on Linux if needed)
-2. Check output folder permissions
-3. Ensure you have write access to the destination directory
-4. Try a different output location with `-o` flag
+  # macOS/Linux
+  source .venv/bin/activate
+  streamlit run ui.py
+  ```
 
-#### ❌ "ModuleNotFoundError: No module named 'snap_memories'"
+---
 
-**Problem**: Not running from correct directory or virtual environment not activated
+## 🎉 That’s It!
 
-**Solutions**:
+You’ve successfully backed up your entire Snapchat history —  
+all your Snaps, Stories, and videos restored with original data and neatly organized. 💛
 
-1. Ensure virtual environment is activated:
-   - Windows: `.\.venv\Scripts\Activate.ps1`
-   - macOS/Linux: `source .venv/bin/activate`
-2. Install dependencies: `pip install -r requirements.txt`
-3. Run as module: `python -m snap_memories` (not `python snap_memories.py`)
+If you ever need to reprocess your Snaps later:
 
-#### ❌ Downloads failing or timing out
+1. Just run `run_ui.bat` (Windows) or `./run_ui.sh` (macOS/Linux) again
+2. Or use the command line interface from Step 4
 
-**Problem**: Network issues or Snapchat rate limiting
+> 💬 **Tip:** Use the web UI's "Dry Run" option to preview actions before running for real.
 
-**Solutions**:
+---
 
-1. Reduce download workers: `--download-workers 8` (from default 32)
-2. Check internet connection
-3. Wait a few minutes if rate-limited (Snapchat may temporarily block requests)
-4. Try again later
-
-#### ❌ GPU encoding errors
-
-**Problem**: GPU acceleration issues or incompatible GPU
-
-**Solutions**:
-
-1. Force CPU encoding: `--no-gpu`
-2. Check GPU drivers are up to date
-3. Verify FFmpeg GPU support: `ffmpeg -encoders | grep nvenc` (or amf/qsv/videotoolbox)
-4. GPU encoding is optional - CPU encoding works fine, just slower
-
-#### ❌ "Invalid data found when processing input" (FFmpeg)
-
-**Problem**: Corrupted video files or invalid format
-
-**Solutions**:
-
-1. Test with `--dry-run` first to identify problematic files
-2. Process files individually if possible
-3. Some files may be corrupted - the tool will skip them and continue
-4. Check if the file is actually a valid video file
-
-#### ❌ Out of memory errors
-
-**Problem**: Too many parallel workers consuming too much RAM
-
-**Solutions**:
-
-1. Reduce workers:
-   - `--image-workers 4` (from default 8)
-   - `--video-workers 2` (from default 4)
-   - `--download-workers 16` (from default 32)
-2. Process smaller batches of files
-3. Close other applications to free RAM
-
-#### ❌ "ZIP file with wrong extension" warnings
-
-**Problem**: Some ZIP files have incorrect extensions (e.g., `.jpg` instead of `.zip`)
-
-**Solution**: The tool automatically detects and fixes these. This is informational, not an error.
-
-#### ❌ Metadata not applying
-
-**Problem**: HTML file not found or invalid format
-
-**Solutions**:
-
-1. Verify HTML file path is correct
-2. Ensure HTML file is the correct `memories_history.html` from Snapchat export
-3. Check HTML file is readable: `cat memories_history.html | head -20`
-4. In folder mode, use `-m` flag: `python -m snap_memories process ./memories -m memories_history.html`
-
-#### ❌ Dry run shows different results than actual run
-
-**Problem**: File system state changed between dry run and actual run
-
-**Solution**: This is normal if files were modified between runs. Dry run shows what _would_ happen based on current state.
-
-### Debugging Tips
-
-1. **Use verbose mode**: `-v` or `--verbose` shows detailed progress
-2. **Use dry run first**: `--dry-run` to preview without making changes
-3. **Check logs**: Errors are displayed with ❌ prefix
-4. **Process incrementally**: Try processing a small subset first
-5. **Verify inputs**: Ensure HTML file and folders are valid
-
-### Getting Help
-
-If you encounter issues not covered here:
-
-1. Run with verbose mode: `python -m snap_memories run input -v`
-2. Check error messages carefully - they often indicate the specific problem
-3. Verify all requirements are installed correctly
-4. Check that input files/folders are valid and accessible
-
-### Performance Issues
-
-If processing is slow:
-
-1. **Enable GPU**: Ensure GPU is detected (check startup message)
-2. **Increase workers**: `--image-workers 16 --video-workers 8`
-3. **Use FFmpeg GPU**: `--ffmpeg-gpu` for maximum video processing speed
-4. **Reduce workers if unstable**: If crashes occur, reduce worker counts
-5. **Check disk space**: Ensure enough free space for output files
-
-## 🏗️ Architecture
-
-The tool is built with a modular, object-oriented architecture:
-
-- **`cli.py`**: Command-line interface and argument parsing
-- **`config.py`**: Configuration management
-- **`logger.py`**: Centralized logging system with multiple verbosity levels
-- **`pipeline.py`**: Main pipeline orchestrator
-- **`planner.py`**: Planning operations
-- **`executors.py`**: Execution services:
-  - `ZipService`: ZIP file extraction
-  - `CopyService`: File copying operations
-  - `RenameService`: File renaming operations
-  - `CombineService`: Image/video combining
-- **`download.py`**: Download management
-- **`metadata.py`**: Metadata parsing and writing
-- **`fs.py`**: Filesystem utilities
-- **`stats.py`**: Statistics and counting functions
-- **`utils.py`**: General utilities
-- **`gpu.py`**: GPU detection and configuration
+**Made with care to keep your Snapchat memories safe, clear, and easy to restore 📷 💛**

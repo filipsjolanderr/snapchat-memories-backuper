@@ -263,7 +263,7 @@ class Pipeline:
                         meta = parse_memories_html(html_path)
                         if meta:
                             info(f"🧭 Applying metadata...")
-                            img_tag, vid_tag = apply_metadata_to_outputs(out, meta)
+                            img_tag, vid_tag = apply_metadata_to_outputs(out, meta, self.cfg.metadata_workers)
                             info(
                                 f"🧭 Metadata applied → images: {img_tag}, "
                                 f"videos: {vid_tag}"
@@ -469,7 +469,7 @@ class Pipeline:
                             try:
                                 meta = parse_memories_html(self.cfg.metadata_html)
                                 info(f"🧭 Applying metadata ({len(meta)} entries found in HTML)...")
-                                img_tag, vid_tag = apply_metadata_to_outputs(out, meta)
+                                img_tag, vid_tag = apply_metadata_to_outputs(out, meta, self.cfg.metadata_workers)
                                 info(
                                     f"🧭 Metadata applied → images: {img_tag}, "
                                     f"videos: {vid_tag}"
