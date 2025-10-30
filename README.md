@@ -1,19 +1,6 @@
 # Snapchat Memories Backuper
 
-A Python tool to restore and organize Snapchat Memories from exported data. **Recommended approach**: Download memories directly from HTML files for the easiest experience.
-
-## 📋 Table of Contents
-
-- [Getting Your Snapchat Data](#getting-your-snapchat-data)
-- [Requirements](#requirements)
-- [Installation](#installation)
-- [Architecture](#architecture)
-- [Usage](#usage)
-- [Command Reference](#command-reference)
-- [What It Does](#what-it-does)
-- [Metadata Support](#metadata-support)
-- [Performance Tuning](#performance-tuning)
-- [Troubleshooting](#troubleshooting)
+A Python tool to restore and organize Snapchat Memories from exported data.
 
 ## 📱 Getting Your Snapchat Data
 
@@ -37,9 +24,9 @@ A Python tool to restore and organize Snapchat Memories from exported data. **Re
 4. Inside the extracted folder, locate and open the `index.html` file
 5. Once the page opens in your browser, navigate to the **Memories** section to view all your saved Snaps and Stories
 
-### Step 3: Get the HTML File (Recommended Method)
+### Step 3: Get the HTML File
 
-**🎯 Direct Download Method (Easiest)**
+**🎯 Direct Download Method (Recommended Method)**
 
 - Save the `memories_history.html` file from your Snapchat data export
 - Use this script to download and process all memories automatically
