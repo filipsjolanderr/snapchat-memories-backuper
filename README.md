@@ -38,7 +38,7 @@ Do this **from a computer or laptop** using Snapchat’s website — **not** fro
 
 ---
 
-## 🚀 Quick Start (Just One Command!)
+## 🚀 Step 3: Start the Backuper
 
 ### 🪟 **Windows**
 
@@ -83,7 +83,7 @@ That's it! The script will:
 
 ---
 
-### 🌐 Next: Use the Web UI
+### 🌐 Step 4: Use the Web UI
 
 Once the web interface opens:
 
@@ -104,41 +104,6 @@ This program helps you:
 ✅ Combine overlay stickers and text back into your photos/videos  
 ✅ Recover the correct **date and location metadata** for each memory  
 ✅ Automatically organize everything into a nice, clean folder
-
----
-
-## 🪄 Step 3: One‑Click Setup & Launch (Detailed Guide)
-
-> 💡 **Already cloned?** Skip to the launcher section below!
-
-If you haven't cloned yet, see the [Quick Start](#-quick-start-3-steps) section above first.
-
-The easiest way to get started — **just double-click and the web UI opens!**
-
-### 🪟 **Windows**
-
-Just double‑click **`run_ui.bat`**
-
-It automatically:
-
-- ✅ Checks that Python is installed
-- ✅ Creates and activates the virtual environment
-- ✅ Installs all required packages
-- ✅ Checks for FFmpeg
-- ✅ **Opens the beautiful web interface in your browser!**
-
----
-
-### 🐧 **macOS / Linux**
-
-Run this in your Terminal from the project folder:
-
-```bash
-chmod +x run_ui.sh
-./run_ui.sh
-```
-
-It does the exact same steps automatically and opens the web UI.
 
 ---
 
@@ -197,15 +162,35 @@ pip install -r requirements.txt
 
 ### 🌐 **Option A – Web UI (Recommended)**
 
-Just use the one-click launcher from Step 3! The web interface makes everything easy.
+#### 🪟 **Windows**
+
+Just double‑click **`run_ui.bat`**
+
+It automatically:
+
+- ✅ Checks that Python is installed
+- ✅ Creates and activates the virtual environment
+- ✅ Installs all required packages
+- ✅ Checks for FFmpeg
+- ✅ **Opens the beautiful web interface in your browser!**
+
+---
+
+#### 🐧 **macOS / Linux**
+
+Run this in your Terminal from the project folder:
+
+```bash
+chmod +x run_ui.sh
+./run_ui.sh
+```
 
 ---
 
 ### 💻 **Option B – Command Line Interface**
 
 If you prefer using the command line:
-
-#### HTML File Mode (Recommended)
+#### HTML File Mode 
 
 ```bash
 python -m snap_memories memories_history.html -o output_folder
