@@ -159,13 +159,63 @@ def check_gpu_status() -> tuple[bool, str]:
         return False, f"Could not detect GPU: {str(e)}"
 
 
+def get_folder_path() -> Optional[str]:
+    """Get folder path using tkinter dialog."""
+    try:
+        import subprocess
+        import tempfile
+        import json
+        
+        script = """
+import tkinter as tk
+from tkinter import filedialog
+import json
+import sys
+
+root = tk.Tk()
+root.withdraw()
+root.attributes('-topmost', True)
+
+folder_path = filedialog.askdirectory(title="Select Folder")
+if folder_path:
+    print(json.dumps({"path": folder_path}))
+else:
+    print(json.dumps({"path": None}))
+root.destroy()
+"""
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as f:
+            f.write(script)
+            script_path = f.name
+        
+        try:
+            result = subprocess.run(
+                ["python", script_path],
+                capture_output=True,
+                text=True,
+                timeout=30,
+                cwd=str(Path.cwd())
+            )
+            
+            if result.returncode == 0 and result.stdout.strip():
+                data = json.loads(result.stdout.strip())
+                return data.get("path")
+        finally:
+            try:
+                Path(script_path).unlink()
+            except:
+                pass
+    except Exception:
+        pass
+    return None
+
+
 def main():
     """Main Streamlit app."""
     st.set_page_config(
         page_title="Snapchat Memories Backuper",
         page_icon="📸",
-        layout="centered",
-        initial_sidebar_state="expanded"
+        layout="wide",
+        initial_sidebar_state="collapsed"
     )
     
     # Custom CSS for better styling
@@ -176,7 +226,7 @@ def main():
         font-weight: bold;
         color: #FFFC00;
         text-align: center;
-        margin-bottom: 1rem;
+        margin-bottom: 0.5rem;
     }
     .subtitle {
         text-align: center;
@@ -189,15 +239,16 @@ def main():
         color: #000;
         font-weight: bold;
         border-radius: 5px;
-        padding: 0.5rem 1rem;
+        padding: 0.75rem 1rem;
+        font-size: 1.1rem;
     }
     .stButton>button:hover {
         background-color: #FFE600;
     }
-    .main-content {
-        max-width: 900px;
-        margin: 0 auto;
-    }
+    /* Hide deploy button */
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    header {visibility: hidden;}
     </style>
     """, unsafe_allow_html=True)
     
@@ -205,64 +256,32 @@ def main():
     st.markdown('<p class="main-header">📸 Snapchat Memories Backuper</p>', unsafe_allow_html=True)
     st.markdown('<p class="subtitle">Download and organize your Snapchat Memories</p>', unsafe_allow_html=True)
     
-    # Sidebar configuration
-    with st.sidebar:
-        st.header("⚙️ Configuration")
-        
-        # Mode selection - HTML is the default, folder mode is hidden
-        mode = st.radio(
-            "Input Mode",
-            ["HTML File", "Folder"],
-            help="HTML File: Downloads memories from URLs in HTML file\n\nFolder: Process files you've already downloaded"
-        )
-        
-        # Warn about folder mode
-        if mode == "Folder":
-            st.warning("⚠️ Note: You must have already downloaded your memories to use this mode")
-        
-        # Performance settings
-        st.subheader("🚀 Performance")
-        gpu_available, gpu_status = check_gpu_status()
-        if gpu_available:
-            st.success(gpu_status)
-        else:
-            st.info(gpu_status)
-        
-        use_gpu = st.checkbox("Use GPU Acceleration", value=gpu_available, disabled=not gpu_available,
-                              help="When enabled, automatically uses FFmpeg GPU pipeline for faster video processing")
-        
-        image_workers = st.slider("Image Workers", 1, 32, 8, 
-                                  help="Number of parallel workers for image processing")
-        video_workers = st.slider("Video Workers", 1, 16, 4,
-                                  help="Number of parallel workers for video processing")
-        download_workers = st.slider("Download Workers", 1, 64, 32,
-                                     help="Number of parallel workers for downloads")
-        metadata_workers = st.slider("Metadata Workers", 1, 32, 8,
-                                     help="Number of parallel workers for metadata application")
-        
-        # Options
-        st.subheader("📋 Options")
-        dry_run = st.checkbox("Dry Run", value=False,
-                             help="Preview actions without making changes")
-        verbose = st.checkbox("Verbose Output", value=False,
-                             help="Show detailed progress information")
-        quiet = st.checkbox("Quiet Mode", value=False,
-                           help="Suppress all output except errors")
+    # Initialize session state
+    if "output_folder" not in st.session_state:
+        st.session_state.output_folder = ""
+    if "advanced_mode" not in st.session_state:
+        st.session_state.advanced_mode = False
     
-    # Main content area - Step-by-step flow
-    st.markdown("---")
+    # Advanced mode toggle at the top
+    col_toggle, _ = st.columns([1, 3])
+    with col_toggle:
+        advanced_mode = st.checkbox("⚙️ Advanced Mode", value=st.session_state.advanced_mode, key="advanced_checkbox")
+        st.session_state.advanced_mode = advanced_mode
     
-    # Step 1: Input Selection
-    st.subheader("Step 1: Select Input")
-    st.caption("Choose your input file or folder")
+    # Main 2-column layout
+    col_left, col_right = st.columns(2)
     
-    if mode == "HTML File":
+    with col_left:
+        st.markdown("### 📄 Select Your Memories File")
+        st.markdown("Upload your `memories_history.html` file from your Snapchat data export")
+        
         input_file = st.file_uploader(
-            "Select memories_history.html file",
+            "Choose memories_history.html file",
             type=['html'],
             help="Upload the memories_history.html file from your Snapchat data export",
             label_visibility="collapsed"
         )
+        
         input_path: Optional[Path] = None
         if input_file is not None:
             # Save uploaded file temporarily
@@ -270,196 +289,107 @@ def main():
             with open(temp_path, "wb") as f:
                 f.write(input_file.getvalue())
             st.session_state.temp_html_path = temp_path
-            st.session_state.input_file_name = input_file.name  # Store original name
+            st.session_state.input_file_name = input_file.name
             input_path = temp_path
-            st.success(f"✅ File loaded: `{input_file.name}`")
+            st.success(f"✅ **File loaded:** `{input_file.name}`")
         else:
-            st.info("💡 Upload your `memories_history.html` file from your Snapchat data export")
-            # Clear stored filename if no file is selected
+            st.info("💡 **How to get your file:**\n\n1. Open Snapchat → Profile → Settings → My Data\n2. Request your data export\n3. Download and extract the ZIP file\n4. Find `memories_history.html` inside")
             if "input_file_name" in st.session_state:
                 del st.session_state.input_file_name
-        metadata_path = None
-    else:
-        # Folder mode - hidden in collapsed expander
-        with st.expander("📂 Folder Processing Mode", expanded=False):
-            st.info("⚠️ **Note**: You must have already downloaded your memories to use this mode")
-            input_folder = st.text_input(
-                "Folder Path",
-                value="",
-                help="Enter the path to the folder containing your memories"
-            )
-            input_path = Path(input_folder) if input_folder else None
-            
-            # Metadata file (for folder mode)
-            metadata_path: Optional[Path] = None
-            metadata_option = st.radio(
-                "Metadata File",
-                ["None", "Upload HTML file", "Specify path"],
-                help="Optional: Provide memories_history.html for metadata"
-            )
-            
-            if metadata_option == "Upload HTML file":
-                metadata_file = st.file_uploader(
-                    "Select metadata HTML file",
-                    type=['html'],
-                    key="metadata_upload"
-                )
-                if metadata_file is not None:
-                    temp_path = Path("temp_metadata.html")
-                    with open(temp_path, "wb") as f:
-                        f.write(metadata_file.getvalue())
-                    st.session_state.temp_metadata_path = temp_path
-                    metadata_path = temp_path
-                    st.success(f"✅ Metadata file loaded: {metadata_file.name}")
-            elif metadata_option == "Specify path":
-                metadata_input = st.text_input("Metadata HTML File Path", key="metadata_path")
-                if metadata_input:
-                    metadata_path = Path(metadata_input)
     
-    # Show input status
-    if input_path and not input_path.exists():
-        st.warning(f"⚠️ Input path not found: `{input_path}`")
-    
-    st.markdown("---")
-    
-    # Step 2: Output Selection
-    st.subheader("Step 2: Select Output Folder")
-    st.caption("Choose where to save your processed memories")
-    
-    # Initialize session state for output folder
-    if "output_folder" not in st.session_state:
-        st.session_state.output_folder = ""
-    
-    # Browse button - primary method
-    if HAS_TKINTER:
-        col_browse1, col_browse2, col_browse3 = st.columns([1, 1, 1])
-        with col_browse2:
-            browse_clicked = st.button("📁 Browse folder", use_container_width=True,
-                                      help="Open folder browser to select output folder",
-                                      type="secondary")
+    with col_right:
+        st.markdown("### 📁 Where to Save Your Memories")
+        st.markdown("Choose where you want your memories saved")
         
-        if browse_clicked:
-            try:
-                import subprocess   
-                import tempfile
-                import json
-                
-                script = """
-import tkinter as tk
-from tkinter import filedialog
-import json
-import sys
-
-root = tk.Tk()
-root.withdraw()
-root.attributes('-topmost', True)
-
-folder_path = filedialog.askdirectory(title="Select Output Folder")
-if folder_path:
-    print(json.dumps({"path": folder_path}))
-else:
-    print(json.dumps({"path": None}))
-root.destroy()
-"""
-                with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as f:
-                    f.write(script)
-                    script_path = f.name
-                
-                try:
-                    result = subprocess.run(
-                        ["python", script_path],
-                        capture_output=True,
-                        text=True,
-                        timeout=30,
-                        cwd=str(Path.cwd())
-                    )
-                    
-                    if result.returncode == 0 and result.stdout.strip():
-                        import json
-                        data = json.loads(result.stdout.strip())
-                        if data.get("path"):
-                            folder_path = data["path"]
-                            st.session_state.output_folder = folder_path
-                            if "output_folder_input" in st.session_state:
-                                del st.session_state.output_folder_input
-                            st.rerun()
-                finally:
-                    try:
-                        Path(script_path).unlink()
-                    except:
-                        pass
-            except Exception as e:
-                st.error(f"Could not open folder browser: {str(e)}")
-    else:
-        st.info("💡 Tip: Copy the folder path from Windows Explorer and paste it below")
-    
-    # Text input for manual entry
-    output_dir = st.text_input(
-        "Output Folder Path",
-        value=st.session_state.output_folder,
-        help="Enter folder path or leave empty for default 'output/' folder",
-        key="output_folder_input",
-        placeholder="Enter folder path or click Browse..."
-    )
-    
-    if output_dir:
-        st.session_state.output_folder = output_dir
-    
-    # Show selected folder below the input
-    if st.session_state.output_folder:
-        st.info(f"📁 **Selected output folder:** `{st.session_state.output_folder}`")
-        output_dir = st.session_state.output_folder
-    else:
-        output_dir = None
-        current_dir = Path.cwd()
-        st.caption(f"💡 Default: `{current_dir / 'output'}`")
-    
-    # Show folder status
-    if output_dir:
-        output_path = Path(output_dir).resolve()
-        try:
-            test_path = Path(output_dir)
-            if test_path.exists() and test_path.is_dir():
-                st.success(f"✅ Output folder ready")
-            elif test_path.exists() and test_path.is_file():
-                st.warning(f"⚠️ Path exists but is a file, not a folder")
+        # Browse button (if available) or text input (fallback)
+        if HAS_TKINTER:
+            browse_clicked = st.button("📂 Browse Folder", use_container_width=True, type="secondary")
+            
+            if browse_clicked:
+                folder_path = get_folder_path()
+                if folder_path:
+                    st.session_state.output_folder = folder_path
+                    st.rerun()
+        else:
+            # Show text input as fallback when folder browser is not available
+            st.info("💡 Enter the folder path manually below")
+            output_dir = st.text_input(
+                "Save memories to folder",
+                value=st.session_state.output_folder,
+                help="Enter folder path or leave empty for default 'output/' folder",
+                key="output_folder_input",
+                placeholder="C:\\Users\\YourName\\Pictures\\Memories"
+            )
+            
+            if output_dir:
+                st.session_state.output_folder = output_dir
+        
+        # Show selected folder
+        if st.session_state.output_folder:
+            output_path = Path(st.session_state.output_folder).resolve()
+            st.success(f"✅ **Will save to:** `{output_path}`")
+        else:
+            output_path = None
+            current_dir = Path.cwd()
+            if HAS_TKINTER:
+                st.info(f"💡 **Default location:** `{current_dir / 'output'}`\n\nClick 'Browse Folder' to choose a different location.")
             else:
-                st.info(f"ℹ️ Folder will be created at this location")
-        except Exception as e:
-            st.error(f"❌ Invalid path: {str(e)}")
-    else:
-        output_path = None
+                st.info(f"💡 **Default location:** `{current_dir / 'output'}`\n\nOr enter a path above to use a different location.")
     
+    # Advanced settings (collapsed by default)
+    if advanced_mode:
+        with st.expander("⚙️ Advanced Settings", expanded=True):
+            col_adv1, col_adv2 = st.columns(2)
+            
+            with col_adv1:
+                st.subheader("🚀 Performance")
+                gpu_available, gpu_status = check_gpu_status()
+                if gpu_available:
+                    st.success(gpu_status)
+                else:
+                    st.info(gpu_status)
+                
+                use_gpu = st.checkbox("Use GPU Acceleration", value=gpu_available, disabled=not gpu_available,
+                                      help="Faster video processing if GPU is available")
+                
+                image_workers = st.slider("Image Workers", 1, 32, 8, 
+                                          help="Number of parallel workers for image processing")
+                video_workers = st.slider("Video Workers", 1, 16, 4,
+                                          help="Number of parallel workers for video processing")
+                download_workers = st.slider("Download Workers", 1, 64, 32,
+                                             help="Number of parallel workers for downloads")
+                metadata_workers = st.slider("Metadata Workers", 1, 32, 8,
+                                             help="Number of parallel workers for metadata application")
+            
+            with col_adv2:
+                st.subheader("📋 Options")
+                dry_run = st.checkbox("Dry Run", value=False,
+                                     help="Preview actions without making changes")
+                verbose = st.checkbox("Verbose Output", value=False,
+                                     help="Show detailed progress information")
+                quiet = st.checkbox("Quiet Mode", value=False,
+                                   help="Suppress all output except errors")
+    else:
+        # Use defaults for non-advanced mode
+        gpu_available, _ = check_gpu_status()
+        use_gpu = gpu_available
+        image_workers = 8
+        video_workers = 4
+        download_workers = 32
+        metadata_workers = 8
+        dry_run = False
+        verbose = False
+        quiet = False
+    
+    # Start button
     st.markdown("---")
+    col_btn, _ = st.columns([1, 3])
+    with col_btn:
+        start_clicked = st.button("🚀 Start Backup", type="primary", use_container_width=True)
     
-    # Step 3: Start Processing
-    st.subheader("Step 3: Start Processing")
-    st.caption("Review your settings and click to begin")
-    
-    # Show summary before processing
-    if input_path and input_path.exists():
-        summary_col1, summary_col2 = st.columns(2)
-        with summary_col1:
-            # Show original filename if available, otherwise show path
-            if mode == "HTML File" and "input_file_name" in st.session_state:
-                display_name = st.session_state.input_file_name
-            else:
-                display_name = input_path.name if input_path.is_file() else str(input_path)
-            st.info(f"📥 **Input:** `{display_name}`")
-        with summary_col2:
-            if output_path:
-                st.info(f"📤 **Output:** `{output_path}`")
-            else:
-                st.info(f"📤 **Output:** Default folder")
-    
-    if st.button("🚀 Start Processing", type="primary", use_container_width=True):
+    if start_clicked:
         if input_path is None or not input_path.exists():
-            st.error("❌ Please select a valid input file or folder")
-            return
-        
-        # Validate metadata path if provided
-        if metadata_path is not None and not metadata_path.exists():
-            st.error(f"❌ Metadata file not found: {metadata_path}")
+            st.error("❌ **Please select your memories_history.html file first**")
             return
         
         # Initialize logger
@@ -468,7 +398,6 @@ root.destroy()
         set_logger(logger)
         
         # Build configuration
-        # When GPU is enabled, automatically use FFmpeg GPU pipeline (faster than MoviePy)
         cfg = AppConfig(
             dry_run=dry_run,
             image_workers=image_workers,
@@ -476,12 +405,12 @@ root.destroy()
             download_workers=download_workers,
             metadata_workers=metadata_workers,
             use_gpu=use_gpu,
-            use_ffmpeg_gpu=use_gpu,  # Auto-enable FFmpeg GPU when GPU is enabled
+            use_ffmpeg_gpu=use_gpu,
             verbose=verbose,
             quiet=quiet,
             input_path=input_path.resolve(),
             output_dir=output_path,
-            metadata_html=metadata_path.resolve() if metadata_path else None,
+            metadata_html=None,
         )
         
         # Create progress container
@@ -514,13 +443,12 @@ root.destroy()
                 exit_code = pipeline.run_auto()
                 
                 if exit_code == 0:
-                    st.success("✅ Processing complete!")
+                    st.success("✅ **Processing complete!**")
                     
                     # Show output directory
                     final_output = cfg.output_dir if cfg.output_dir else cfg.input_path.parent / "output"
                     if final_output.exists():
-                        st.info(f"📁 Output folder: {final_output}")
-                        st.success(f"✅ Files saved to: {final_output.absolute()}")
+                        st.info(f"📁 **Files saved to:** `{final_output.absolute()}`")
                 else:
                     st.error(f"❌ Processing failed with exit code: {exit_code}")
                     
@@ -540,41 +468,6 @@ root.destroy()
                     metadata_module.tqdm = original_metadata_tqdm
                 if original_pipeline_tqdm is not None:
                     pipeline_module.tqdm = original_pipeline_tqdm
-    
-    # Instructions
-    with st.expander("📖 Instructions"):
-        st.markdown("""
-        ### Getting Your Snapchat Data
-        
-        1. **Request Your Data**: 
-           - Open Snapchat → Profile → Settings → My Data
-           - Check "Export Your Memories" and set date range to "All Time"
-           - Submit request and wait for email (2-3 hours usually)
-        
-        2. **Download & Extract**:
-           - Download the ZIP file from the email
-           - Extract it to a folder
-        
-        3. **Use This Tool**:
-           - **HTML Mode**: Upload the `memories_history.html` file to download all memories
-           - **Folder Mode**: Point to the folder containing your downloaded memories
-        
-        ### Features
-        
-        - ✅ Automatic download from HTML file
-        - ✅ ZIP file extraction and processing
-        - ✅ Image/video combining with overlays
-        - ✅ Metadata application (date, location)
-        - ✅ GPU acceleration support
-        - ✅ Parallel processing for fast performance
-        
-        ### Tips
-        
-        - Use **Dry Run** first to preview what will happen
-        - Increase workers for faster processing (if you have enough RAM)
-        - Enable GPU acceleration if available for faster video processing
-        - Leave output folder empty to use default location
-        """)
 
 
 if __name__ == "__main__":

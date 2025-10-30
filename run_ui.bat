@@ -3,7 +3,7 @@ title Snapchat Memories Backuper - Web UI Launcher
 color 0B
 
 echo ==============================================
-echo   📸 Snapchat Memories Backuper - Web UI
+echo   Snapchat Memories Backuper - Web UI
 echo ==============================================
 echo.
 

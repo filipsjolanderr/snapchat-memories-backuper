@@ -16,6 +16,41 @@ class LogLevel(Enum):
     DEBUG = 3  # Maximum verbosity including tracebacks
 
 
+def _safe_print(message: str, file=sys.stdout, fallback: str = "") -> None:
+    """Safely print a message, handling encoding errors on Windows."""
+    try:
+        print(message, file=file, flush=True)
+    except UnicodeEncodeError:
+        # On Windows, console might not support Unicode emojis
+        # Try to replace emojis with ASCII equivalents
+        safe_message = message
+        emoji_replacements = {
+            "❌": "[ERROR]",
+            "⚠️": "[WARNING]",
+            "✅": "[OK]",
+            "📥": "[INPUT]",
+            "📤": "[OUTPUT]",
+            "📸": "[PHOTO]",
+            "📄": "[FILE]",
+            "📁": "[FOLDER]",
+            "📂": "[BROWSE]",
+            "💡": "[TIP]",
+            "🚀": "[START]",
+            "🔄": "[PROCESSING]",
+            "⚙️": "[SETTINGS]",
+        }
+        for emoji, replacement in emoji_replacements.items():
+            safe_message = safe_message.replace(emoji, replacement)
+        try:
+            print(safe_message, file=file, flush=True)
+        except UnicodeEncodeError:
+            # Last resort: use provided fallback or strip all non-ASCII
+            if fallback:
+                print(fallback, file=file, flush=True)
+            else:
+                print(message.encode('ascii', 'ignore').decode('ascii'), file=file, flush=True)
+
+
 class Logger:
     """Centralized logger for consistent user output."""
     
@@ -28,25 +63,33 @@ class Logger:
             return
         if exc and self.level.value >= LogLevel.DEBUG.value:
             import traceback
-            print(f"❌ Error: {message}", file=sys.stderr)
-            traceback.print_exception(type(exc), exc, exc.__traceback__, file=sys.stderr)
+            _safe_print(f"❌ Error: {message}", file=sys.stderr)
+            try:
+                traceback.print_exception(type(exc), exc, exc.__traceback__, file=sys.stderr)
+            except (UnicodeEncodeError, AttributeError):
+                # Fallback for traceback with Unicode issues or older Python versions
+                try:
+                    exc_str = str(exc).encode('ascii', 'replace').decode('ascii')
+                    _safe_print(f"Exception details: {exc_str}", file=sys.stderr)
+                except Exception:
+                    _safe_print("Exception occurred (details unavailable due to encoding)", file=sys.stderr)
         else:
             error_details = ""
             if exc:
                 error_msg = str(exc).strip()
                 if error_msg:
                     error_details = f": {error_msg}"
-            print(f"❌ Error: {message}{error_details}", file=sys.stderr)
+            _safe_print(f"❌ Error: {message}{error_details}", file=sys.stderr)
     
     def warning(self, message: str) -> None:
         """Print warning message. Shown for NORMAL and above."""
         if self.level.value >= LogLevel.NORMAL.value:
-            print(f"⚠️  Warning: {message}", file=sys.stderr)
+            _safe_print(f"⚠️  Warning: {message}", file=sys.stderr)
     
     def info(self, message: str) -> None:
         """Print info message. Shown for NORMAL and above."""
         if self.level.value >= LogLevel.NORMAL.value:
-            print(message)
+            _safe_print(message)
     
     def verbose(self, message: str) -> None:
         """Print verbose message. Shown for VERBOSE and above."""
