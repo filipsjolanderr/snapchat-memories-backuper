@@ -6,18 +6,35 @@ It works on **Windows, macOS, and Linux**, and you don't need to know anything a
 
 ---
 
-## 📋 What You Need
+## 📥 Step 1: Request Your Snapchat Data
 
-The setup script will automatically install everything for you! But if you want to check beforehand:
+1. Open your browser (Chrome, Edge, or Safari) and go to:  
+   👉 [https://accounts.snapchat.com](https://accounts.snapchat.com) or use the Snapchat App
+2. Log in with your Snapchat username and password
+3. Click your **profile icon** in the top‑left corner (top‑right in the app)
+4. Choose **Account Settings**
+5. Scroll down and click **My Data**
+6. Check ✅ the box **“Export Your Memories”** and click **"Request Only Memories"**
+7. Under **Date Range**, select **All Time** to include every snap you’ve ever saved
+8. Make sure your email address is correct — Snapchat will send your download link there
+9. Click **Submit**
 
-- **Python 3.11+** - The script will install it automatically if not found
-  - On Windows: Uses `winget` to install Python
-  - On macOS: Uses `brew` to install Python
-  - On Linux: Uses `apt` or `yum` to install Python
-- **FFmpeg** (optional) - The script will offer to install it automatically
-  - Makes video processing faster, but everything works without it
+> ⏳ **Note:** It can take a few hours.  
+> You’ll get an email with a download link once your data is ready.
 
-> 💡 **Note:** The setup scripts automatically detect and install missing dependencies! Just run the setup command and it handles everything.
+---
+
+## 💾 Step 2: Download and Extract Your Data
+
+Do this **from a computer or laptop** using Snapchat’s website — **not** from your phone.
+
+1. When you receive the email from Snapchat, click **"click here"**
+2. Click **"See exports"** → then click **"Download"**
+3. Save the ZIP file and **extract** (unzip) it:
+   - On **Windows:** Right‑click → “Extract All...”
+   - On **Mac:** Double‑click the file
+4. Inside the extracted folder, go into the **html** folder and find  
+   **`memories_history.html`** → that’s the important file!
 
 ---
 
@@ -87,38 +104,6 @@ This program helps you:
 ✅ Combine overlay stickers and text back into your photos/videos  
 ✅ Recover the correct **date and location metadata** for each memory  
 ✅ Automatically organize everything into a nice, clean folder
-
----
-
-## 📥 Step 1: Request Your Snapchat Data
-
-1. Open your browser (Chrome, Edge, or Safari) and go to:  
-   👉 [https://accounts.snapchat.com](https://accounts.snapchat.com) or use the Snapchat App
-2. Log in with your Snapchat username and password
-3. Click your **profile icon** in the top‑left corner (top‑right in the app)
-4. Choose **Account Settings**
-5. Scroll down and click **My Data**
-6. Check ✅ the box **“Export Your Memories”** and click **"Request Only Memories"**
-7. Under **Date Range**, select **All Time** to include every snap you’ve ever saved
-8. Make sure your email address is correct — Snapchat will send your download link there
-9. Click **Submit**
-
-> ⏳ **Note:** It can take a few hours.  
-> You’ll get an email with a download link once your data is ready.
-
----
-
-## 💾 Step 2: Download and Extract Your Data
-
-Do this **from a computer or laptop** using Snapchat’s website — **not** from your phone.
-
-1. When you receive the email from Snapchat, click **"click here"**
-2. Click **"See exports"** → then click **"Download"**
-3. Save the ZIP file and **extract** (unzip) it:
-   - On **Windows:** Right‑click → “Extract All...”
-   - On **Mac:** Double‑click the file
-4. Inside the extracted folder, go into the **html** folder and find  
-   **`memories_history.html`** → that’s the important file!
 
 ---
 
