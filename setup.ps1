@@ -47,7 +47,7 @@ if (Test-Path $repoName) {
         Write-Host '[OK] Files extracted successfully!' -ForegroundColor Green
     } catch {
         Write-Host '[ERROR] Failed to download or extract repository!' -ForegroundColor Red
-        Write-Host "Error: $_" -ForegroundColor Red
+        Write-Host ('Error: ' + $_.Exception.Message) -ForegroundColor Red
         Write-Host ''
         Write-Host 'Please try downloading manually from:' -ForegroundColor Yellow
         Write-Host 'https://github.com/filipsjolanderr/snapchat-memories-backuper' -ForegroundColor Cyan
