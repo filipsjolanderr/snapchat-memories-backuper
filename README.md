@@ -395,24 +395,3 @@ If processing is slow:
 3. **Use FFmpeg GPU**: `--ffmpeg-gpu` for maximum video processing speed
 4. **Reduce workers if unstable**: If crashes occur, reduce worker counts
 5. **Check disk space**: Ensure enough free space for output files
-
-## 📈 Performance Benchmarks
-
-Typical performance on modern hardware:
-
-- **Downloads**: ~100-200 files/minute (depends on connection speed)
-- **Image combining**: ~10-50 images/second (depends on CPU/GPU)
-- **Video combining**: ~1-5 videos/minute (depends on GPU and file size)
-
-With GPU acceleration:
-
-- Video processing can be **5-10x faster** than CPU-only
-- FFmpeg GPU pipeline is typically **2-3x faster** than MoviePy GPU
-
-## 📝 Notes
-
-- The tool automatically handles file conflicts and skips already-processed files
-- Temporary files are cleaned up automatically
-- ZIP files are removed after extraction (unless in dry-run mode)
-- Metadata is preserved and applied to final output files
-- The tool is safe to run multiple times - it won't duplicate work
