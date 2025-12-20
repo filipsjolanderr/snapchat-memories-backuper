@@ -92,7 +92,7 @@ echo.
 REM Install dependencies
 if exist requirements.txt (
     echo Installing required Python packages...
-    echo (This takes a minute or two, please wait!)
+    echo This takes a minute or two, please wait!
     pip install -r requirements.txt --quiet
     if errorlevel 1 (
         echo Failed to install dependencies.
