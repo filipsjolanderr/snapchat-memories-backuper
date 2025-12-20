@@ -15,7 +15,6 @@ from pathlib import Path
 from typing import List, Set, Tuple
 
 # ... imports ...
-import requests
 from PIL import Image, PngImagePlugin
 # Keep moviepy for fallback or if we decide to keep it, but we prefer ffmpeg
 from moviepy import CompositeVideoClip, ImageClip, VideoFileClip
