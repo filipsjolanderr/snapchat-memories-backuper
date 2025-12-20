@@ -9,6 +9,10 @@ import subprocess
 import sys
 from pathlib import Path
 
+# Add parent to path to import snap_memories
+sys.path.append(str(Path(__file__).parent.parent))
+from snap_memories.ffmpeg import get_ffmpeg_path
+
 def check_ffmpeg_amd_support():
     """Check if FFmpeg has AMD AMF support."""
     print("=" * 80)
@@ -20,7 +24,7 @@ def check_ffmpeg_amd_support():
     print("1. Checking FFmpeg version...")
     try:
         result = subprocess.run(
-            ["ffmpeg", "-version"],
+            [get_ffmpeg_path(), "-version"],
             capture_output=True,
             text=True,
             timeout=10
@@ -44,7 +48,7 @@ def check_ffmpeg_amd_support():
     print("2. Checking for AMD AMF encoder support...")
     try:
         result = subprocess.run(
-            ["ffmpeg", "-encoders"],
+            [get_ffmpeg_path(), "-encoders"],
             capture_output=True,
             text=True,
             timeout=10
@@ -77,7 +81,7 @@ def check_ffmpeg_amd_support():
     print("3. Checking hardware acceleration support...")
     try:
         result = subprocess.run(
-            ["ffmpeg", "-hwaccels"],
+            [get_ffmpeg_path(), "-hwaccels"],
             capture_output=True,
             text=True,
             timeout=10
@@ -106,7 +110,7 @@ def check_ffmpeg_amd_support():
     try:
         result = subprocess.run(
             [
-                "ffmpeg",
+                get_ffmpeg_path(),
                 "-hide_banner",
                 "-f", "lavfi",
                 "-i", "testsrc=duration=1:size=320x240:rate=1",
@@ -155,7 +159,7 @@ def test_gpu_encoding_with_overlay():
         test_video = temp_dir / "test_input.mp4"
         result = subprocess.run(
             [
-                "ffmpeg", "-y", "-f", "lavfi",
+                get_ffmpeg_path(), "-y", "-f", "lavfi",
                 "-i", "testsrc=duration=2:size=640x480:rate=30",
                 "-c:v", "libx264", "-preset", "ultrafast",
                 "-pix_fmt", "yuv420p",
@@ -181,7 +185,7 @@ def test_gpu_encoding_with_overlay():
         output_video = temp_dir / "test_output_gpu.mp4"
         
         cmd = [
-            "ffmpeg", "-y",
+            get_ffmpeg_path(), "-y",
             "-hwaccel", "d3d11va",  # AMD GPU hardware acceleration
             "-i", str(test_video),
             "-loop", "1",

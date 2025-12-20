@@ -77,46 +77,7 @@ if (-not $pythonFound) {
     exit 1
 }
 
-# Check and install FFmpeg if needed
-Write-Host ""
-Write-Host "Checking for FFmpeg..." -ForegroundColor Cyan
-$ffmpegFound = Test-Command "ffmpeg"
-
-if (-not $ffmpegFound) {
-    Write-Host " [!] FFmpeg not found (optional but recommended)" -ForegroundColor Yellow
-    Write-Host ""
-    
-    # Try to install FFmpeg automatically
-    if (Test-Command "winget") {
-        Write-Host "Would you like to install FFmpeg automatically? (Y/n)" -ForegroundColor Cyan
-        $response = Read-Host
-        if ($response -ne "n" -and $response -ne "N") {
-            Write-Host "Installing FFmpeg..." -ForegroundColor Cyan
-            Write-Host "This may take a moment..." -ForegroundColor Yellow
-            try {
-                winget install Gyan.FFmpeg --accept-package-agreements --accept-source-agreements --silent
-                if ($LASTEXITCODE -eq 0) {
-                    Write-Host " [OK] FFmpeg installed successfully!" -ForegroundColor Green
-                    Write-Host "Note: You may need to restart PowerShell for FFmpeg to be available." -ForegroundColor Yellow
-                    $ffmpegFound = $true
-                } else {
-                    Write-Host " [!] Automatic installation failed. You can install manually later:" -ForegroundColor Yellow
-                    Write-Host "   winget install Gyan.FFmpeg" -ForegroundColor Cyan
-                }
-            } catch {
-                Write-Host " [!] Could not install FFmpeg automatically." -ForegroundColor Yellow
-                Write-Host "   Install manually with: winget install Gyan.FFmpeg" -ForegroundColor Cyan
-            }
-        } else {
-            Write-Host "Skipping FFmpeg installation. You can install it later for faster video processing." -ForegroundColor Yellow
-        }
-    } else {
-        Write-Host "Install FFmpeg manually with: winget install Gyan.FFmpeg" -ForegroundColor Cyan
-        Write-Host "(Or download from: https://ffmpeg.org/download.html)" -ForegroundColor Cyan
-    }
-} else {
-    Write-Host " [OK] FFmpeg found!" -ForegroundColor Green
-}
+# FFmpeg is now handled automatically via Python dependencies
 
 Write-Host ""
 Write-Host "==============================================" -ForegroundColor Cyan

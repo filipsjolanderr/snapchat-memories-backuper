@@ -213,7 +213,6 @@ class TestMetadataWriting(unittest.TestCase):
         # Verify subprocess call
         mock_subprocess.run.assert_called_once()
         args = mock_subprocess.run.call_args[0][0]
-        self.assertIn("ffmpeg", args)
         self.assertIn(str(mp4_path), args)
 
     def test_apply_metadata_to_outputs(self):

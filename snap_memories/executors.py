@@ -30,6 +30,7 @@ warnings.filterwarnings(
 )
 
 from .config import AppConfig
+from .ffmpeg import get_ffmpeg_path
 from .gpu import GPUDetector
 from .logger import dry_run as log_dry_run, verbose, warning
 from .models import CombinePlan, MemoryKind, RenamePlan
@@ -345,7 +346,7 @@ class CombineService:
         # Check if ffmpeg is available
         self.ffmpeg_available = False
         try:
-            subprocess.run(["ffmpeg", "-version"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+            subprocess.run([get_ffmpeg_path(), "-version"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
             self.ffmpeg_available = True
         except (subprocess.CalledProcessError, FileNotFoundError):
             self.ffmpeg_available = False
@@ -382,7 +383,7 @@ class CombineService:
             elif codec == "h264_videotoolbox":
                 hwaccel = "videotoolbox"
 
-            cmd = ["ffmpeg", "-y"]
+            cmd = [get_ffmpeg_path(), "-y"]
             
             # Note: For synthetic input like testsrc, -hwaccel might not be strictly applicable 
             # or necessary in the same way as decoding, but we want to test if the encoding side works.
@@ -547,7 +548,7 @@ class CombineService:
         self, main_path: Path, overlay_path: Path, out_path: Path,
         codec: str, preset: str, hwaccel: str | None, hwaccel_output_format: str | None, use_gpu: bool
     ) -> None:
-        cmd = ["ffmpeg", "-y"]
+        cmd = [get_ffmpeg_path(), "-y"]
         
         if hwaccel:
             cmd.extend(["-hwaccel", hwaccel])

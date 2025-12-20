@@ -80,65 +80,6 @@ if [ "$PYTHON_FOUND" = false ]; then
     exit 1
 fi
 
-# Check and install FFmpeg if needed
-echo ""
-echo "Checking for FFmpeg..."
-FFMPEG_FOUND=false
-
-if command -v ffmpeg &>/dev/null; then
-    FFMPEG_FOUND=true
-    echo "✅ FFmpeg found!"
-else
-    echo "⚠️ FFmpeg not found (optional but recommended)"
-    echo ""
-    
-    # Try to install FFmpeg automatically
-    if command -v brew &>/dev/null; then
-        echo "Would you like to install FFmpeg automatically? (Y/n)"
-        read -n 1 -r
-        echo ""
-        if [[ ! $REPLY =~ ^[Nn]$ ]]; then
-            echo "Installing FFmpeg..."
-            if brew install ffmpeg; then
-                echo "✅ FFmpeg installed successfully!"
-                FFMPEG_FOUND=true
-            else
-                echo "⚠️ Automatic installation failed. Install manually with: brew install ffmpeg"
-            fi
-        fi
-    elif command -v apt-get &>/dev/null; then
-        echo "Would you like to install FFmpeg automatically? (Y/n)"
-        read -n 1 -r
-        echo ""
-        if [[ ! $REPLY =~ ^[Nn]$ ]]; then
-            echo "Installing FFmpeg (requires sudo)..."
-            if sudo apt-get install -y ffmpeg; then
-                echo "✅ FFmpeg installed successfully!"
-                FFMPEG_FOUND=true
-            else
-                echo "⚠️ Automatic installation failed. Install manually with: sudo apt install ffmpeg"
-            fi
-        fi
-    elif command -v yum &>/dev/null; then
-        echo "Would you like to install FFmpeg automatically? (Y/n)"
-        read -n 1 -r
-        echo ""
-        if [[ ! $REPLY =~ ^[Nn]$ ]]; then
-            echo "Installing FFmpeg (requires sudo)..."
-            if sudo yum install -y ffmpeg; then
-                echo "✅ FFmpeg installed successfully!"
-                FFMPEG_FOUND=true
-            else
-                echo "⚠️ Automatic installation failed. Install manually with: sudo yum install ffmpeg"
-            fi
-        fi
-    else
-        echo "Install FFmpeg manually:"
-        echo "  macOS:  brew install ffmpeg"
-        echo "  Ubuntu: sudo apt install ffmpeg"
-        echo "  Or download from: https://ffmpeg.org/download.html"
-    fi
-fi
 
 echo ""
 echo "=============================================="

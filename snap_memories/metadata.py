@@ -12,6 +12,7 @@ import piexif
 from PIL import Image, PngImagePlugin
 from tqdm import tqdm
 
+from .ffmpeg import get_ffmpeg_path
 from .logger import error, warning
 from .models import DownloadItem, MemoryKind, MemoryMeta
 
@@ -335,7 +336,7 @@ def write_mp4_metadata_ffmpeg(
         if not mp4_path.exists():
             return False
         args = [
-            "ffmpeg",
+            get_ffmpeg_path(),
             "-y",
             "-i",
             str(mp4_path),

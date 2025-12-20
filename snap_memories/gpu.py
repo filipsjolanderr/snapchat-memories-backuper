@@ -4,6 +4,7 @@ import subprocess
 import platform
 from typing import Tuple, List
 
+from .ffmpeg import get_ffmpeg_path
 from .models import GPUInfo
 
 
@@ -12,7 +13,7 @@ class GPUDetector:
     def detect() -> GPUInfo:
         try:
             result = subprocess.run(
-                ["ffmpeg", "-version"],
+                [get_ffmpeg_path(), "-version"],
                 capture_output=True,
                 text=True,
                 timeout=10,
@@ -49,7 +50,7 @@ class GPUDetector:
         try:
             r = subprocess.run(
                 [
-                    "ffmpeg",
+                    get_ffmpeg_path(),
                     "-hide_banner",
                     "-loglevel", "error",
                     "-f",
@@ -80,7 +81,7 @@ def detect_gpu_acceleration() -> Tuple[bool, str, str]:
     try:
         # Check if FFmpeg is available
         result = subprocess.run(
-            ["ffmpeg", "-version"], 
+            [get_ffmpeg_path(), "-version"], 
             capture_output=True, 
             text=True, 
             timeout=10
@@ -94,7 +95,7 @@ def detect_gpu_acceleration() -> Tuple[bool, str, str]:
         if "nvenc" in ffmpeg_output:
             # Test if NVENC actually works
             test_result = subprocess.run([
-                "ffmpeg", "-f", "lavfi", "-i", "testsrc=duration=1:size=320x240:rate=1",
+                get_ffmpeg_path(), "-f", "lavfi", "-i", "testsrc=duration=1:size=320x240:rate=1",
                 "-c:v", "h264_nvenc", "-f", "null", "-"
             ], capture_output=True, timeout=10)
             if test_result.returncode == 0:
@@ -103,7 +104,7 @@ def detect_gpu_acceleration() -> Tuple[bool, str, str]:
         # Check for AMD AMF support
         if "amf" in ffmpeg_output:
             test_result = subprocess.run([
-                "ffmpeg", "-f", "lavfi", "-i", "testsrc=duration=1:size=320x240:rate=1",
+                get_ffmpeg_path(), "-f", "lavfi", "-i", "testsrc=duration=1:size=320x240:rate=1",
                 "-c:v", "h264_amf", "-f", "null", "-"
             ], capture_output=True, timeout=10)
             if test_result.returncode == 0:
@@ -112,7 +113,7 @@ def detect_gpu_acceleration() -> Tuple[bool, str, str]:
         # Check for Intel QSV support
         if "qsv" in ffmpeg_output:
             test_result = subprocess.run([
-                "ffmpeg", "-f", "lavfi", "-i", "testsrc=duration=1:size=320x240:rate=1",
+                get_ffmpeg_path(), "-f", "lavfi", "-i", "testsrc=duration=1:size=320x240:rate=1",
                 "-c:v", "h264_qsv", "-f", "null", "-"
             ], capture_output=True, timeout=10)
             if test_result.returncode == 0:
@@ -121,7 +122,7 @@ def detect_gpu_acceleration() -> Tuple[bool, str, str]:
         # Check for Apple VideoToolbox (macOS)
         if platform.system() == "Darwin" and "videotoolbox" in ffmpeg_output:
             test_result = subprocess.run([
-                "ffmpeg", "-f", "lavfi", "-i", "testsrc=duration=1:size=320x240:rate=1",
+                get_ffmpeg_path(), "-f", "lavfi", "-i", "testsrc=duration=1:size=320x240:rate=1",
                 "-c:v", "h264_videotoolbox", "-f", "null", "-"
             ], capture_output=True, timeout=10)
             if test_result.returncode == 0:
