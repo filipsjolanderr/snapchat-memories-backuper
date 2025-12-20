@@ -1,16 +1,14 @@
 # 📸 Snapchat Memories Backuper
 
-A simple tool to **download, restore, and organize your Snapchat Memories**. Note: This tool works on **Windows, macOS, and Linux**.
+A simple tool to **download, restore, and organize your Snapchat Memories**. Note: This tool works on **Windows**. It is not tested on Mac or Linux, but should work.
 
 ---
 
 ## ✨ Why use this?
 
-- **📥 Downloads Everything**: Grabs all your photos and videos from Snapchat.
-- **⏸️ Resume Anytime**: Internet cut out? Need to turn off your computer? No problem! Close the tool and run it again later—it picks up exactly where it left off.
+- **📥 Downloads Everything**: Grabs all your photos and videos from Snapchat, much faster then doing it in the html file.
 - **📅 Fixes Dates & Locations**: Restores the original date, time, and location for every memory.
-- **🎞️ Combines Edits**: Automatically merges your overlay text and stickers back into your photos and videos.
-- **📁 Smart Organizing**: Sorts deeply buried files into a clean, easy-to-browse folder.
+- **🎞️ Combines Automatically**: Automatically merges your overlay text and stickers back into your photos and videos.
 
 ---
 
