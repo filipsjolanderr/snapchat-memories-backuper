@@ -53,26 +53,7 @@ def main(
         "--dry-run",
         help="Preview all actions without making changes",
     ),
-    image_workers: int = typer.Option(
-        8,
-        "--image-workers",
-        help="Number of parallel workers for image processing",
-    ),
-    video_workers: int = typer.Option(
-        4,
-        "--video-workers",
-        help="Number of parallel workers for video processing",
-    ),
-    download_workers: int = typer.Option(
-        32,
-        "--download-workers",
-        help="Number of parallel workers for downloads",
-    ),
-    metadata_workers: int = typer.Option(
-        8,
-        "--metadata-workers",
-        help="Number of parallel workers for metadata application",
-    ),
+
     use_gpu: bool = typer.Option(
         True,
         "--use-gpu/--no-gpu",
@@ -136,10 +117,7 @@ def main(
     # Build configuration
     cfg = AppConfig(
         dry_run=dry_run,
-        image_workers=image_workers,
-        video_workers=video_workers,
-        download_workers=download_workers,
-        metadata_workers=metadata_workers,
+
         use_gpu=use_gpu,
         use_ffmpeg_gpu=ffmpeg_gpu,
         verbose=verbose,

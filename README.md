@@ -400,5 +400,3 @@ If you ever need to reprocess your Snaps later:
 > 💬 **Tip:** Use the web UI's "Dry Run" option to preview actions before running for real.
 
 ---
-
-**Made with care to keep your Snapchat memories safe, clear, and easy to restore 📷 💛**

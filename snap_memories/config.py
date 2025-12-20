@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
+import os
 
 from .logger import LogLevel
 
@@ -9,10 +10,27 @@ from .logger import LogLevel
 @dataclass(frozen=True)
 class AppConfig:
     dry_run: bool = False
-    image_workers: int = 16
-    video_workers: int = 8
-    download_workers: int = 4
-    metadata_workers: int = 16
+    
+    @property
+    def _cpu_count(self) -> int:
+        return os.cpu_count() or 4
+
+    @property
+    def image_workers(self) -> int:
+        return self._cpu_count * 4
+
+    @property
+    def video_workers(self) -> int:
+        return self._cpu_count * 4
+
+    @property
+    def download_workers(self) -> int:
+        return self._cpu_count * 4
+
+    @property
+    def metadata_workers(self) -> int:
+        return self._cpu_count * 4
+
     use_gpu: bool = True
     use_ffmpeg_gpu: bool = True
     verbose: bool = False

@@ -62,7 +62,7 @@ class DryRunSimulator:
             self.stats["renamed_files"] = self.stats.get("renamed_files", 0) + len(plans)
 
     def simulate_combine_files(
-        self, plans: List[CombinePlan], image_workers: int, video_workers: int
+        self, plans: List[CombinePlan]
     ) -> tuple[int, int]:
         """Simulate combining files."""
         if not plans:

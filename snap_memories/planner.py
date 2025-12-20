@@ -7,7 +7,7 @@ from .fs import (
     IMAGE_EXTS,
     VIDEO_EXT,
     enumerate_main_files,
-    find_zip_files_top_level,
+    find_zip_files_recursively,
     should_skip_dir,
     split_uuid_and_ext,
 )
@@ -21,7 +21,7 @@ class Planner:
     ) -> List[ExtractZipPlan]:
         return [
             ExtractZipPlan(zip_path=z, dest_folder=dest_folder)
-            for z in find_zip_files_top_level(input_folder)
+            for z in find_zip_files_recursively(input_folder)
         ]
 
     def plan_copy_standalone_mp4s(
@@ -36,6 +36,26 @@ class Planner:
                 if not lower.endswith(VIDEO_EXT):
                     continue
                 if "-main." in lower or "_combined." in lower:
+                    continue
+                src = Path(dirpath) / name
+                rel = src.relative_to(input_folder)
+                dst = output_folder / rel
+                if not dst.exists():
+                    plans.append(CopyPlan(src, dst))
+        return plans
+
+    def plan_copy_standalone_images(
+        self, input_folder: Path, output_folder: Path
+    ) -> List[CopyPlan]:
+        plans: List[CopyPlan] = []
+        for dirpath, files in iter_files_recursively(input_folder):
+            if should_skip_dir(dirpath, input_folder, output_folder):
+                continue
+            for name in files:
+                lower = name.lower()
+                if not lower.endswith(tuple(IMAGE_EXTS)):
+                    continue
+                if "-main." in lower or "-overlay." in lower:
                     continue
                 src = Path(dirpath) / name
                 rel = src.relative_to(input_folder)
@@ -73,21 +93,53 @@ class Planner:
                     src = Path(dirpath) / name
                     rel = src.relative_to(source_root)
                     dst = (dst_root / rel).with_suffix(".jpg")
+                    # Skip if output already exists (resume functionality)
+                    if dst.exists():
+                        continue
                     plans.append(RenamePlan(src, dst))
         return plans
 
     def plan_filesystem_combinations(
-        self, scan_folder: Path, output_folder: Path
+        self, scan_folder: Path, output_folder: Path, skip_folder: Path | None = None
     ) -> List[CombinePlan]:
+        from PIL import Image
+        
         plans: List[CombinePlan] = []
-        for main_path in enumerate_main_files(scan_folder):
+        for main_path in enumerate_main_files(scan_folder, skip_folder):
             uuid_str, ext = split_uuid_and_ext(main_path.name)
             overlay_path = main_path.with_name(f"{uuid_str}-overlay.png")
             if not overlay_path.exists():
                 continue
+            
+            # Validate overlay file is actually a valid image before planning
+            try:
+                # Quick check: file size and magic bytes
+                if overlay_path.stat().st_size == 0:
+                    continue  # Skip empty files
+                
+                # Check if it's a ZIP file masquerading as PNG
+                with open(overlay_path, "rb") as f:
+                    header = f.read(4)
+                    if header == b"PK\x03\x04":
+                        continue  # Skip ZIP files
+                
+                # Try to verify it's a valid image
+                try:
+                    test_img = Image.open(overlay_path)
+                    test_img.verify()
+                    test_img.close()
+                except Exception:
+                    # Not a valid image, skip it
+                    continue
+            except Exception:
+                # File access issues, skip it
+                continue
 
             if ext in IMAGE_EXTS:
                 out_path = output_folder / f"{uuid_str}.jpg"
+                # Skip if output already exists (resume functionality)
+                if out_path.exists():
+                    continue
                 plans.append(
                     CombinePlan(
                         main_path=main_path,
@@ -98,6 +150,9 @@ class Planner:
                 )
             elif ext == ".mp4":
                 out_path = output_folder / f"{uuid_str}.mp4"
+                # Skip if output already exists (resume functionality)
+                if out_path.exists():
+                    continue
                 plans.append(
                     CombinePlan(
                         main_path=main_path,

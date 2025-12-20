@@ -137,38 +137,7 @@ class TestCLI(unittest.TestCase):
             import shutil
             shutil.rmtree(temp_dir)
 
-    @patch('snap_memories.cli.Pipeline')
-    @patch('snap_memories.cli._print_gpu_banner')
-    @patch('snap_memories.cli.set_logger')
-    @patch('snap_memories.cli.Logger')
-    def test_main_with_workers(self, mock_logger_class, mock_set_logger, mock_banner, mock_pipeline_class):
-        """Test main function with worker options."""
-        import tempfile
-        import os
-        temp_dir = tempfile.mkdtemp()
-        
-        try:
-            mock_pipeline = Mock()
-            mock_pipeline.run_auto.return_value = 0
-            mock_pipeline_class.return_value = mock_pipeline
-            mock_logger = Mock()
-            mock_logger_class.return_value = mock_logger
 
-            result = self.runner.invoke(app, [
-                temp_dir,
-                '--image-workers', '4',
-                '--video-workers', '2',
-                '--download-workers', '16'
-            ])
-
-            self.assertEqual(result.exit_code, 0)
-            cfg = mock_pipeline_class.call_args[0][0]
-            self.assertEqual(cfg.image_workers, 4)
-            self.assertEqual(cfg.video_workers, 2)
-            self.assertEqual(cfg.download_workers, 16)
-        finally:
-            import shutil
-            shutil.rmtree(temp_dir)
 
     @patch('snap_memories.cli.Pipeline')
     @patch('snap_memories.cli._print_gpu_banner')

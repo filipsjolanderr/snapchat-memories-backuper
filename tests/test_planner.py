@@ -85,10 +85,17 @@ class TestPlanner(unittest.TestCase):
         main_vid = self.temp_dir / "subdir" / "87654321-4321-4321-4321-cba987654321-main.mp4"
         overlay_vid = self.temp_dir / "subdir" / "87654321-4321-4321-4321-cba987654321-overlay.png"
         
+        from PIL import Image
+        
+        # Create minimal valid image content
+        def create_dummy_png(path):
+            img = Image.new('RGBA', (10, 10), color='red')
+            img.save(path)
+            
         main_img.touch()
-        overlay_img.touch()
+        create_dummy_png(overlay_img)
         main_vid.touch()
-        overlay_vid.touch()
+        create_dummy_png(overlay_vid)
         
         output_folder = self.temp_dir / "output"
         plans = self.planner.plan_filesystem_combinations(self.temp_dir, output_folder)

@@ -251,7 +251,7 @@ class TestDryRunSimulator(unittest.TestCase):
             ),
         ]
 
-        img_count, vid_count = self.simulator.simulate_combine_files(plans, 4, 2)
+        img_count, vid_count = self.simulator.simulate_combine_files(plans)
 
         self.assertEqual(img_count, 2)
         self.assertEqual(vid_count, 1)
@@ -264,7 +264,7 @@ class TestDryRunSimulator(unittest.TestCase):
     @patch('snap_memories.simulator.log_dry_run')
     def test_simulate_combine_files_empty(self, mock_log):
         """Test simulating file combining with empty list."""
-        img_count, vid_count = self.simulator.simulate_combine_files([], 4, 2)
+        img_count, vid_count = self.simulator.simulate_combine_files([])
 
         self.assertEqual(img_count, 0)
         self.assertEqual(vid_count, 0)

@@ -12,7 +12,7 @@ from .executors import (
     RenameService,
     ZipService,
 )
-from .fs import detect_and_fix_zip_files, find_zip_files_top_level
+from .fs import detect_and_fix_zip_files, find_zip_files_recursively
 from .logger import error, info, warning
 from .metadata import apply_metadata_to_outputs, parse_memories_html
 from .planner import Planner
@@ -101,9 +101,10 @@ class Pipeline:
             if self.simulator:
                 imgs_dl, vids_dl = self.simulator.simulate_download(items)
             else:
-                imgs_dl, vids_dl = self.downloader.download_all(
+                import asyncio
+                imgs_dl, vids_dl = asyncio.run(self.downloader.download_all(
                     items, out, False
-                )
+                ))
         except KeyboardInterrupt:
             error("Download interrupted by user")
             return 130
@@ -169,9 +170,7 @@ class Pipeline:
                 if combine_plans:
                     try:
                         img_done, vid_done = self.simulator.simulate_combine_files(
-                            combine_plans,
-                            self.cfg.image_workers,
-                            self.cfg.video_workers,
+                            combine_plans
                         )
                     except Exception as e:
                         error("Failed to simulate combine files", e)
@@ -195,7 +194,7 @@ class Pipeline:
 
             # Remove ZIP files after extraction
             try:
-                zip_files = find_zip_files_top_level(out)
+                zip_files = find_zip_files_recursively(out)
                 if zip_files:
                     self.simulator.simulate_remove_zips(zip_files)
             except FileNotFoundError:
@@ -226,6 +225,19 @@ class Pipeline:
                             error("Failed to copy MP4 files", e)
                             return 1
 
+                    # Fix ZIP files in tmp folder (some extracted files might be ZIPs with wrong extensions)
+                    fixed_tmp = detect_and_fix_zip_files(tmp)
+                    if fixed_tmp:
+                        info(f"🔧 Fixed {fixed_tmp} ZIP files with wrong extensions in temp folder")
+                        # Re-extract any newly detected ZIP files
+                        extract_plans_tmp = self.planner.plan_zip_extractions(tmp, tmp)
+                        if extract_plans_tmp:
+                            info(f"📦 Re-extracting {len(extract_plans_tmp)} newly detected ZIP files...")
+                            try:
+                                _ = self.zips.run(extract_plans_tmp, False)
+                            except Exception as e:
+                                warning(f"Failed to re-extract ZIP files from temp: {e}")
+
                     # Unnamed files in out and tmp
                     ren1 = self.planner.plan_unlabeled_renames(out, out, None)
                     ren2 = self.planner.plan_unlabeled_renames(tmp, tmp, None)
@@ -248,8 +260,6 @@ class Pipeline:
                             img_done, vid_done = self.combiner.run(
                                 combine_plans,
                                 False,
-                                self.cfg.image_workers,
-                                self.cfg.video_workers,
                             )
                         except KeyboardInterrupt:
                             error("Processing interrupted by user")
@@ -331,6 +341,23 @@ class Pipeline:
         except (OSError, PermissionError) as e:
             error(f"Cannot create output directory: {out}", e)
             return 2
+        
+        # Check for existing output files (resume functionality)
+        existing_files = 0
+        if out.exists():
+            try:
+                # Count existing output files (UUID.jpg or UUID.mp4)
+                for p in out.rglob("*"):
+                    if p.is_file() and p.suffix.lower() in (".jpg", ".mp4"):
+                        name = p.name.lower()
+                        # Check if it's a final output file (UUID format)
+                        if len(p.stem) == 36 and p.stem.count("-") == 4:  # UUID format
+                            existing_files += 1
+            except Exception:
+                pass
+        
+        if existing_files > 0:
+            info(f"🔄 Resuming: Found {existing_files} already processed files, skipping them...")
 
         tmp_root = out / ".tmp_work"
         if self.simulator:
@@ -343,6 +370,13 @@ class Pipeline:
             )
             if copy_plans:
                 self.simulator.simulate_copy_mp4s(copy_plans)
+
+            # Copy standalone images
+            copy_plans_img = self.planner.plan_copy_standalone_images(
+                input_folder, out
+            )
+            if copy_plans_img:
+                self.simulator.simulate_copy_mp4s(copy_plans_img)  # Reusing rename/copy simulator for simplicity
 
             # Unnamed files
             rename_input = self.planner.plan_unlabeled_renames(
@@ -363,15 +397,15 @@ class Pipeline:
             if rename_tmp:
                 self.simulator.simulate_rename_files(rename_tmp)
             
-            combine_plans = self.planner.plan_filesystem_combinations(tmp, out)
+            combine_plans_tmp = self.planner.plan_filesystem_combinations(tmp, out)
+            combine_plans_input = self.planner.plan_filesystem_combinations(input_folder, out, out)
+            combine_plans = combine_plans_tmp + combine_plans_input
 
             # Combine
             if combine_plans:
                 try:
                     img_done, vid_done = self.simulator.simulate_combine_files(
-                        combine_plans,
-                        self.cfg.image_workers,
-                        self.cfg.video_workers,
+                        combine_plans
                     )
                 except Exception as e:
                     error("Failed to simulate combine files", e)
@@ -395,7 +429,7 @@ class Pipeline:
                         warning(f"Failed to simulate metadata: {e}")
 
             # Remove ZIP files after extraction
-            zip_files = find_zip_files_top_level(input_folder)
+            zip_files = find_zip_files_recursively(input_folder)
             if zip_files:
                 self.simulator.simulate_remove_zips(zip_files)
         else:
@@ -410,6 +444,17 @@ class Pipeline:
                             _ = self.copier.run(copy_plans, False)
                         except Exception as e:
                             error("Failed to copy MP4 files", e)
+                            return 1
+
+                    # Copy standalone images
+                    copy_plans_img = self.planner.plan_copy_standalone_images(
+                        input_folder, out
+                    )
+                    if copy_plans_img:
+                        try:
+                            _ = self.copier.run(copy_plans_img, False, desc="Copying Images")
+                        except Exception as e:
+                            error("Failed to copy image files", e)
                             return 1
 
                     # Unnamed files
@@ -443,7 +488,9 @@ class Pipeline:
                             error("Failed to rename files", e)
                             return 1
                     
-                    combine_plans = self.planner.plan_filesystem_combinations(tmp, out)
+                    combine_plans_tmp = self.planner.plan_filesystem_combinations(tmp, out)
+                    combine_plans_input = self.planner.plan_filesystem_combinations(input_folder, out, out)
+                    combine_plans = combine_plans_tmp + combine_plans_input
 
                     # Combine
                     if combine_plans:
@@ -451,8 +498,6 @@ class Pipeline:
                             img_done, vid_done = self.combiner.run(
                                 combine_plans,
                                 False,
-                                self.cfg.image_workers,
-                                self.cfg.video_workers,
                             )
                         except KeyboardInterrupt:
                             error("Processing interrupted by user")
@@ -478,7 +523,7 @@ class Pipeline:
                                 warning(f"Failed to apply metadata: {e}")
 
                     # Remove ZIP files after extraction
-                    zip_files = find_zip_files_top_level(input_folder)
+                    zip_files = find_zip_files_recursively(input_folder)
                     if zip_files:
                         removed_count = 0
                         for zip_file in zip_files:
@@ -497,9 +542,9 @@ class Pipeline:
         info("\n✅ Done." if not self.cfg.dry_run else "\n✅ Dry run complete.")
         info(f"📁 Output folder: {out}")
         try:
-            z, n, m, total = count_input_breakdown(input_folder, out)
+            z, n, m, i, total = count_input_breakdown(input_folder, out)
             info(
-                f"⬆️ Input: {total} (zips: {z}, unnamed: {n}, mp4s: {m})"
+                f"⬆️ Input: {total} (zips: {z}, unnamed: {n}, mp4s: {m}, imgs: {i})"
             )
             if not self.cfg.dry_run:
                 info(f"⬇️ Output Memories: {count_output_memories(out)}")

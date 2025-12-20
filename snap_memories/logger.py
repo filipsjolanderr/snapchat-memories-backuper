@@ -16,8 +16,10 @@ class LogLevel(Enum):
     DEBUG = 3  # Maximum verbosity including tracebacks
 
 
-def _safe_print(message: str, file=sys.stdout, fallback: str = "") -> None:
+def _safe_print(message: str, file=None, fallback: str = "") -> None:
     """Safely print a message, handling encoding errors on Windows."""
+    if file is None:
+        file = sys.stdout
     try:
         print(message, file=file, flush=True)
     except UnicodeEncodeError:

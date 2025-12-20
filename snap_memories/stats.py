@@ -12,6 +12,7 @@ def count_input_breakdown(input_root: Path, output_folder: Path):
     zips = 0
     noext = 0
     mp4s = 0
+    imgs = 0
 
     for dirpath, files in iter_files_recursively(input_root):
         if should_skip_dir(dirpath, input_root, output_folder):
@@ -28,7 +29,13 @@ def count_input_breakdown(input_root: Path, output_folder: Path):
                 if "_combined." in lower:
                     continue
                 mp4s += 1
-    return zips, noext, mp4s, zips + noext + mp4s
+            elif lower.endswith(tuple(IMAGE_EXTS)):
+                if "-main." in lower:
+                    continue
+                if "_combined." in lower:
+                    continue
+                imgs += 1
+    return zips, noext, mp4s, imgs, zips + noext + mp4s + imgs
 
 
 def count_output_memories(root: Path) -> int:

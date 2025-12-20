@@ -15,54 +15,59 @@ VIDEO_EXT = ".mp4"
 UUID_IN_NAME = re.compile(r"[0-9a-fA-F-]{36}")
 
 
-def find_zip_files_top_level(folder: Path) -> List[Path]:
+def find_zip_files_recursively(folder: Path) -> List[Path]:
     zips: List[Path] = []
-    for p in folder.iterdir():
-        if not p.is_file():
-            continue
-        if p.suffix.lower() == ".zip":
-            zips.append(p)
-            continue
-        try:
-            with open(p, "rb") as f:
-                if f.read(4) == b"PK\x03\x04":
-                    zips.append(p)
-        except Exception:
-            continue
+    for dirpath, files in iter_files_recursively(folder):
+        for name in files:
+            p = Path(dirpath) / name
+            if p.suffix.lower() == ".zip":
+                zips.append(p)
+                continue
+            try:
+                with open(p, "rb") as f:
+                    if f.read(4) == b"PK\x03\x04":
+                        zips.append(p)
+            except Exception:
+                continue
     return zips
 
 
 def detect_and_fix_zip_files(folder: Path) -> int:
+    """Detect and fix ZIP files with wrong extensions, recursively."""
     fixed = 0
-    for file in folder.iterdir():
-        if not file.is_file():
-            continue
-        if file.suffix.lower() == ".zip":
-            continue
-        try:
-            is_zip = False
-            with open(file, "rb") as f:
-                if f.read(4) == b"PK\x03\x04":
-                    is_zip = True
-            # File is now closed, safe to rename
-            if is_zip:
-                dst = file.with_suffix(".zip")
-                if dst.exists():
-                    continue
-                file.rename(dst)
-                fixed += 1
-                verbose(
-                    f"Detected ZIP (wrong extension), "
-                    f"renamed: {file.name} → {dst.name}"
-                )
-        except Exception:
-            continue
+    for dirpath, files in iter_files_recursively(folder):
+        for name in files:
+            file = dirpath / name
+            if not file.is_file():
+                continue
+            if file.suffix.lower() == ".zip":
+                continue
+            try:
+                is_zip = False
+                with open(file, "rb") as f:
+                    if f.read(4) == b"PK\x03\x04":
+                        is_zip = True
+                # File is now closed, safe to rename
+                if is_zip:
+                    dst = file.with_suffix(".zip")
+                    if dst.exists():
+                        continue
+                    file.rename(dst)
+                    fixed += 1
+                    verbose(
+                        f"Detected ZIP (wrong extension), "
+                        f"renamed: {file.name} → {dst.name}"
+                    )
+            except Exception:
+                continue
     return fixed
 
 
-def enumerate_main_files(scan_folder: Path) -> List[Path]:
+def enumerate_main_files(scan_folder: Path, skip_folder: Path | None = None) -> List[Path]:
     out: List[Path] = []
     for d, files in iter_files_recursively(scan_folder):
+        if skip_folder and is_within_path(d, skip_folder):
+            continue
         for n in files:
             if "-main." in n:
                 out.append(d / n)
