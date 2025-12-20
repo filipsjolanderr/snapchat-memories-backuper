@@ -2,7 +2,7 @@
 # This script downloads the repository and launches the web UI
 
 Write-Host "==============================================" -ForegroundColor Cyan
-Write-Host " 📸 Snapchat Memories Backuper - Auto Setup" -ForegroundColor Cyan
+Write-Host " [x] Snapchat Memories Backuper - Auto Setup" -ForegroundColor Cyan
 Write-Host "==============================================" -ForegroundColor Cyan
 Write-Host ""
 
@@ -24,7 +24,7 @@ if (Test-Command "python") {
         if ($LASTEXITCODE -eq 0) {
             $pythonFound = $true
             $pythonCmd = "python"
-            Write-Host "✅ Python found: $version" -ForegroundColor Green
+            Write-Host " [OK] Python found: $version" -ForegroundColor Green
         }
     } catch {}
 }
@@ -36,14 +36,14 @@ if (-not $pythonFound) {
             if ($LASTEXITCODE -eq 0) {
                 $pythonFound = $true
                 $pythonCmd = "py"
-                Write-Host "✅ Python found: $version" -ForegroundColor Green
+                Write-Host " [OK] Python found: $version" -ForegroundColor Green
             }
         } catch {}
     }
 }
 
 if (-not $pythonFound) {
-    Write-Host "❌ Python not found!" -ForegroundColor Yellow
+    Write-Host " [X] Python not found!" -ForegroundColor Yellow
     Write-Host ""
     Write-Host "Attempting to install Python automatically..." -ForegroundColor Cyan
     
@@ -54,7 +54,7 @@ if (-not $pythonFound) {
         try {
             winget install Python.Python.3.12 --accept-package-agreements --accept-source-agreements --silent
             if ($LASTEXITCODE -eq 0) {
-                Write-Host "✅ Python installed successfully!" -ForegroundColor Green
+                Write-Host " [OK] Python installed successfully!" -ForegroundColor Green
                 Write-Host "Please restart PowerShell and run this script again." -ForegroundColor Yellow
                 Write-Host ""
                 Write-Host "After restarting, Python will be available in your PATH." -ForegroundColor Cyan
@@ -62,7 +62,7 @@ if (-not $pythonFound) {
                 exit 0
             }
         } catch {
-            Write-Host "⚠️ Automatic installation failed. Please install manually:" -ForegroundColor Yellow
+            Write-Host " [!] Automatic installation failed. Please install manually:" -ForegroundColor Yellow
         }
     }
     
@@ -83,7 +83,7 @@ Write-Host "Checking for FFmpeg..." -ForegroundColor Cyan
 $ffmpegFound = Test-Command "ffmpeg"
 
 if (-not $ffmpegFound) {
-    Write-Host "⚠️ FFmpeg not found (optional but recommended)" -ForegroundColor Yellow
+    Write-Host " [!] FFmpeg not found (optional but recommended)" -ForegroundColor Yellow
     Write-Host ""
     
     # Try to install FFmpeg automatically
@@ -96,15 +96,15 @@ if (-not $ffmpegFound) {
             try {
                 winget install Gyan.FFmpeg --accept-package-agreements --accept-source-agreements --silent
                 if ($LASTEXITCODE -eq 0) {
-                    Write-Host "✅ FFmpeg installed successfully!" -ForegroundColor Green
+                    Write-Host " [OK] FFmpeg installed successfully!" -ForegroundColor Green
                     Write-Host "Note: You may need to restart PowerShell for FFmpeg to be available." -ForegroundColor Yellow
                     $ffmpegFound = $true
                 } else {
-                    Write-Host "⚠️ Automatic installation failed. You can install manually later:" -ForegroundColor Yellow
+                    Write-Host " [!] Automatic installation failed. You can install manually later:" -ForegroundColor Yellow
                     Write-Host "   winget install Gyan.FFmpeg" -ForegroundColor Cyan
                 }
             } catch {
-                Write-Host "⚠️ Could not install FFmpeg automatically." -ForegroundColor Yellow
+                Write-Host " [!] Could not install FFmpeg automatically." -ForegroundColor Yellow
                 Write-Host "   Install manually with: winget install Gyan.FFmpeg" -ForegroundColor Cyan
             }
         } else {
@@ -115,7 +115,7 @@ if (-not $ffmpegFound) {
         Write-Host "(Or download from: https://ffmpeg.org/download.html)" -ForegroundColor Cyan
     }
 } else {
-    Write-Host "✅ FFmpeg found!" -ForegroundColor Green
+    Write-Host " [OK] FFmpeg found!" -ForegroundColor Green
 }
 
 Write-Host ""
@@ -130,7 +130,7 @@ $zipFile = "snapchat-memories-backuper.zip"
 
 # Check if directory already exists
 if (Test-Path $repoName) {
-    Write-Host "⚠️ Directory '$repoName' already exists!" -ForegroundColor Yellow
+    Write-Host " [!] Directory '$repoName' already exists!" -ForegroundColor Yellow
     $overwrite = Read-Host "Do you want to use the existing directory? (Y/n)"
     if ($overwrite -eq "n" -or $overwrite -eq "N") {
         Write-Host "Exiting..." -ForegroundColor Red
@@ -147,7 +147,7 @@ if (Test-Path $repoName) {
         $ProgressPreference = 'SilentlyContinue'  # Suppress progress bar for cleaner output
         Invoke-WebRequest -Uri $zipUrl -OutFile $zipFile -ErrorAction Stop
         
-        Write-Host "✅ Download complete!" -ForegroundColor Green
+        Write-Host " [OK] Download complete!" -ForegroundColor Green
         
         # Extract ZIP file
         Write-Host ""
@@ -162,9 +162,9 @@ if (Test-Path $repoName) {
         # Clean up ZIP file
         Remove-Item -Path $zipFile -Force -ErrorAction SilentlyContinue
         
-        Write-Host "✅ Files extracted successfully!" -ForegroundColor Green
+        Write-Host " [OK] Files extracted successfully!" -ForegroundColor Green
     } catch {
-        Write-Host "❌ Failed to download or extract repository!" -ForegroundColor Red
+        Write-Host " [X] Failed to download or extract repository!" -ForegroundColor Red
         Write-Host "Error: $_" -ForegroundColor Red
         Write-Host ""
         Write-Host "Please try downloading manually from:" -ForegroundColor Yellow
@@ -179,7 +179,7 @@ Set-Location $repoName
 
 # Check if run_ui.bat exists
 if (-not (Test-Path "run_ui.bat")) {
-    Write-Host "❌ run_ui.bat not found in repository!" -ForegroundColor Red
+    Write-Host " [X] run_ui.bat not found in repository!" -ForegroundColor Red
     Write-Host "The repository may not have downloaded correctly." -ForegroundColor Yellow
     pause
     exit 1
@@ -187,8 +187,8 @@ if (-not (Test-Path "run_ui.bat")) {
 
 Write-Host ""
 Write-Host "==============================================" -ForegroundColor Cyan
-Write-Host "✅ Repository ready!" -ForegroundColor Green
-Write-Host "🚀 Launching setup script..." -ForegroundColor Cyan
+Write-Host " [OK] Repository ready!" -ForegroundColor Green
+Write-Host "Launching setup script..." -ForegroundColor Cyan
 Write-Host "==============================================" -ForegroundColor Cyan
 Write-Host ""
 

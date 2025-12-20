@@ -1,372 +1,80 @@
 # 📸 Snapchat Memories Backuper
 
-A simple tool to **download, restore, and organize your Snapchat Memories** using the data Snapchat lets you export.
-
-It works on **Windows, macOS, and Linux**, and you don't need to know anything about coding or Python!
+A simple tool to **download, restore, and organize your Snapchat Memories**. Note: This tool works on **Windows, macOS, and Linux**.
 
 ---
 
-## 📥 Step 1: Request Your Snapchat Data
+## ✨ Why use this?
 
-1. Open your browser (Chrome, Edge, or Safari) and go to:  
-   👉 [https://accounts.snapchat.com](https://accounts.snapchat.com) or use the Snapchat App
-2. Log in with your Snapchat username and password
-3. Click your **profile icon** in the top‑left corner (top‑right in the app)
-4. Choose **Account Settings**
-5. Scroll down and click **My Data**
-6. Check ✅ the box **“Export Your Memories”** and click **"Request Only Memories"**
-7. Under **Date Range**, select **All Time** to include every snap you’ve ever saved
-8. Make sure your email address is correct — Snapchat will send your download link there
-9. Click **Submit**
-
-> ⏳ **Note:** It can take a few hours.  
-> You’ll get an email with a download link once your data is ready.
+- **📥 Downloads Everything**: Grabs all your photos and videos from Snapchat.
+- **⏸️ Resume Anytime**: Internet cut out? Need to turn off your computer? No problem! Close the tool and run it again later—it picks up exactly where it left off.
+- **📅 Fixes Dates & Locations**: Restores the original date, time, and location for every memory.
+- **🎞️ Combines Edits**: Automatically merges your overlay text and stickers back into your photos and videos.
+- **📁 Smart Organizing**: Sorts deeply buried files into a clean, easy-to-browse folder.
 
 ---
 
-## 💾 Step 2: Download and Extract Your Data
+## 🚀 Easy Start (Recommended)
 
-Do this **from a computer or laptop** using Snapchat’s website — **not** from your phone.
+### 1. Request Your Data
+1. Go to [accounts.snapchat.com](https://accounts.snapchat.com) and log in.
+2. Click **My Data**.
+3. Select **"Export Your Memories"** and choose **"Request Only Memories"**.
+4. Set Date Range to **All Time** and click **Submit**.
+5. Wait for the email from Snapchat (this can take a while!).
 
-1. When you receive the email from Snapchat, click **"click here"**
-2. Click **"See exports"** → then click **"Download"**
-3. Save the ZIP file and **extract** (unzip) it:
-   - On **Windows:** Right‑click → “Extract All...”
-   - On **Mac:** Double‑click the file
-4. Inside the extracted folder, go into the **html** folder and find  
-   **`memories_history.html`** → that’s the important file!
+### 2. Download Your Data
+1. Click the link in the email to download your data.
+2. **Extract (Unzip)** the file you downloaded.
+3. Look for the file `memories_history.html` inside the `html` folder—you'll need this!
 
----
+### 3. Run the Tool
 
-## 🚀 Step 3: Start the Backuper
-
-### 🪟 **Windows**
-
-1. **Open PowerShell:**
-
-   - Press the **Windows key** (or click Start)
-   - Type **"PowerShell"**
-   - Click **"Windows PowerShell"** (or press Enter)
-
-2. **Copy and paste this ONE command, then press Enter:**
-
+#### 🪟 Windows
+Right-click your **Start button**, choose **Windows PowerShell**, paste this, and hit Enter:
 ```powershell
-Invoke-WebRequest -Uri "https://raw.githubusercontent.com/filipsjolanderr/snapchat-memories-backuper/main/setup.ps1" -OutFile "setup.ps1"; .\setup.ps1
+cd $env:USERPROFILE\Downloads; Invoke-WebRequest -Uri "https://raw.githubusercontent.com/filipsjolanderr/snapchat-memories-backuper/main/setup.ps1" -OutFile "setup.ps1"; .\setup.ps1
 ```
 
-That's it! The script will:
-
-- ✅ Download everything automatically
-- ✅ Install all required packages
-- ✅ Open the web interface in your browser
-
----
-
-### 🐧 **macOS / Linux**
-
-1. **Open Terminal:**
-
-   - **macOS:** Press `Cmd + Space`, type "Terminal", press Enter
-   - **Linux:** Press `Ctrl + Alt + T` or search for "Terminal" in your applications
-
-2. **Copy and paste this ONE command, then press Enter:**
-
+#### 🍎 macOS / 🐧 Linux
+Open your **Terminal**, paste this, and hit Enter:
 ```bash
 curl -O https://raw.githubusercontent.com/filipsjolanderr/snapchat-memories-backuper/main/setup.sh && chmod +x setup.sh && ./setup.sh
 ```
 
-That's it! The script will:
-
-- ✅ Download everything automatically
-- ✅ Install all required packages
-- ✅ Open the web interface in your browser
+**That's it!** The tool will install everything it needs and open a beautiful Web UI to guide you through the rest.
 
 ---
 
-## 🌐 Step 4: Use the Web UI
+## 🛠️ For Advanced Users
 
-Once the web interface opens:
+If you prefer using the command line or have specific needs, you can use the tool directly.
 
-1. **Upload** your `memories_history.html` file
-2. **Choose** where to save your processed memories
-3. **Click** "Start Processing"
-
-Done! 🎉
-
----
-
-## 🧰 What This Tool Does
-
-This program helps you:
-
-✅ Download all your Snaps and Stories from your official Snapchat data export  
-✅ Fix Snapchat’s messy file names and missing extensions  
-✅ Combine overlay stickers and text back into your photos/videos  
-✅ Recover the correct **date and location metadata** for each memory  
-✅ Automatically organize everything into a nice, clean folder
-
----
-
-### 🌐 Using the Web UI
-
-Once the web interface opens:
-
-1. **Upload** your `memories_history.html` file
-2. **Choose** where to save your processed memories
-3. **Configure** performance settings (optional)
-4. **Click** "Start Processing" and watch it work!
-
-The web UI provides:
-
-- 📊 Real-time progress bars
-- ⚙️ Easy configuration options
-- 🎨 Beautiful, user-friendly interface
-- 📁 Simple file/folder selection
-
-That’s it — no command line needed!
-
----
-
-## 🧩 Alternative: Manual Installation (If You Prefer)
-
-If you prefer to install manually instead of using the one-click launcher:
-
-1. [Install Python 3.11+](https://www.python.org/downloads)
-   - Make sure to check ✅ **Add Python to PATH** on Windows!
-2. Create a virtual environment:
+### Installation
+Requires Python 3.11+.
 
 ```bash
+git clone https://github.com/filipsjolanderr/snapchat-memories-backuper
+cd snapchat-memories-backuper
 python -m venv .venv
-```
-
-Activate it:
-
-- **Windows:**
-  ```powershell
-  .\.venv\Scripts\Activate.ps1
-  ```
-- **macOS/Linux:**
-  ```bash
-  source .venv/bin/activate
-  ```
-
-3. Install dependencies:
-
-```bash
+source .venv/bin/activate  # or .\.venv\Scripts\Activate.ps1 on Windows
 pip install -r requirements.txt
 ```
 
----
+### Usage
 
-## ▶️ Step 4: Run the Tool
-
-### 🌐 **Option A – Web UI (Recommended)**
-
-#### 🪟 **Windows**
-
-Just double‑click **`run_ui.bat`**
-
-It automatically:
-
-- ✅ Checks that Python is installed
-- ✅ Creates and activates the virtual environment
-- ✅ Installs all required packages
-- ✅ Checks for FFmpeg
-- ✅ **Opens the beautiful web interface in your browser!**
-
----
-
-#### 🐧 **macOS / Linux**
-
-Run this in your Terminal from the project folder:
-
+**Standard Mode (Download from HTML):**
 ```bash
-chmod +x run_ui.sh
-./run_ui.sh
+python -m snap_memories memories_history.html
 ```
 
----
-
-### 💻 **Option B – Command Line Interface**
-
-If you prefer using the command line:
-#### HTML File Mode 
-
+**Folder Mode (Process downloaded files):**
+Got a folder full of zips or half-processed files? Just point the tool at it. It will recursively find everything, figure out what's done, and finish the job.
 ```bash
-python -m snap_memories memories_history.html -o output_folder
+python -m snap_memories ./my_memories_folder
 ```
 
-✅ The tool will:
-
-- Download all your Memories automatically
-- Combine any images or videos with overlays
-- Add the correct date/time and location metadata
-- Save your organized files into `output_folder`
-
-**Windows (PowerShell):**
-
-```powershell
-.\.venv\Scripts\Activate.ps1
-python -m snap_memories memories_history.html -o output_folder
-```
-
-**macOS/Linux:**
-
-```bash
-source .venv/bin/activate
-python -m snap_memories memories_history.html -o output_folder
-```
-
----
-
-#### Folder Mode
-
-If you already downloaded the memories manually into a folder:
-
-```bash
-python -m snap_memories ./memories -o output_folder -m memories_history.html
-```
-
----
-
-#### ⚙️ Optional Settings
-
-| Option                  | Description                                              |
-| ----------------------- | -------------------------------------------------------- |
-| `--dry-run`             | Preview what will happen without actually making changes |
-| `-v`                    | Verbose mode (see detailed progress)                     |
-| `--no-gpu`              | Disable GPU acceleration if needed                       |
-| `--download-workers 64` | Faster downloads (if you have good internet)             |
-
-**Example:**
-
-```bash
-python -m snap_memories memories_history.html -o output -v --download-workers 64
-```
-
----
-
-## 🎨 Step 5: Sit Back and Let It Work!
-
-You’ll see progress bars as it:
-
-- ⬇️ Downloads your files
-- 🗂️ Organizes and renames them
-- 🎞️ Merges overlay images/videos
-- 🗺️ Adds date/time/location metadata
-
-When it’s done, open the **output** folder —  
-you’ll find all your Memories neatly restored and sorted!
-
----
-
-## 🧩 Common Issues & Fixes
-
-| Problem                             | Solution                                               |
-| ----------------------------------- | ------------------------------------------------------ |
-| **FFmpeg not found**                | Install FFmpeg (see below)                             |
-| **Permission denied**               | Try a different output folder or run terminal as admin |
-| **Module not found: snap_memories** | Make sure your virtual environment is active           |
-| **Slow or failing downloads**       | Reduce parallel workers: `--download-workers 8`        |
-
----
-
-## 🎬 Installing FFmpeg (for Video Support)
-
-If you don’t have FFmpeg yet, install it as follows:
-
-- **Windows:**
-  ```bash
-  winget install Gyan.FFmpeg
-  ```
-  Then restart your terminal.
-- **macOS:**
-  ```bash
-  brew install ffmpeg
-  ```
-- **Linux (Ubuntu/Debian):**
-  ```bash
-  sudo apt install ffmpeg
-  ```
-
----
-
-## ⚡ Optional – GPU Support
-
-If you have a supported GPU, FFmpeg uses it to speed up video processing:
-
-- **NVIDIA:** NVENC (`h264_nvenc`)
-- **AMD:** AMF (`h264_amf`)
-- **Intel:** QSV (`h264_qsv`)
-- **Apple:** VideoToolbox (`h264_videotoolbox`)
-
-If GPU isn’t available, it automatically uses CPU mode (slower but still fine).
-
----
-
-## 🧠 Advanced: What the Launcher Scripts Do
-
-### 📁 `run_ui.bat` (Windows)
-
-The Windows batch script (`run_ui.bat`) performs these steps:
-
-1. ✅ Checks for Python installation
-2. ✅ Creates virtual environment (`.venv`) if it doesn't exist
-3. ✅ Activates the virtual environment
-4. ✅ Upgrades pip to the latest version
-5. ✅ Installs all required packages from `requirements.txt`
-6. ✅ Checks for FFmpeg (warns if missing)
-7. ✅ Launches Streamlit web UI (`streamlit run ui.py`)
-
-The web interface automatically opens in your default browser!
-
----
-
-### 🐧 `run_ui.sh` (macOS/Linux)
-
-The shell script (`run_ui.sh`) does the same steps:
-
-1. ✅ Checks for Python 3 installation
-2. ✅ Creates virtual environment (`.venv`) if it doesn't exist
-3. ✅ Activates the virtual environment
-4. ✅ Upgrades pip to the latest version
-5. ✅ Installs all required packages from `requirements.txt`
-6. ✅ Checks for FFmpeg (warns if missing)
-7. ✅ Launches Streamlit web UI (`streamlit run ui.py`)
-
-The web interface automatically opens in your default browser!
-
----
-
-### 🔄 Running Again Later
-
-Once you've run the script once, the virtual environment is created. You can:
-
-- **Option 1:** Just run `run_ui.bat` (Windows) or `./run_ui.sh` (macOS/Linux) again — it's smart enough to reuse the existing environment
-- **Option 2:** Manually activate and run:
-
-  ```bash
-  # Windows
-  .\.venv\Scripts\Activate.ps1
-  streamlit run ui.py
-
-  # macOS/Linux
-  source .venv/bin/activate
-  streamlit run ui.py
-  ```
-
----
-
-## 🎉 That’s It!
-
-You’ve successfully backed up your entire Snapchat history —  
-all your Snaps, Stories, and videos restored with original data and neatly organized. 💛
-
-If you ever need to reprocess your Snaps later:
-
-1. Just run `run_ui.bat` (Windows) or `./run_ui.sh` (macOS/Linux) again
-2. Or use the command line interface from Step 4
-
-> 💬 **Tip:** Use the web UI's "Dry Run" option to preview actions before running for real.
-
----
+### Options
+- `-o output_folder`: Specify where to save the files.
+- `--dry-run`: See what would happen without doing anything.
+- `-v`: Verbose mode (see more details).
