@@ -351,7 +351,7 @@ class CombineService:
         except (subprocess.CalledProcessError, FileNotFoundError):
             self.ffmpeg_available = False
 
-        self._use_ffmpeg_gpu = cfg.use_ffmpeg_gpu and self.gpu_info and self.gpu_info.available
+        self._use_ffmpeg_gpu = cfg.use_gpu and self.gpu_info and self.gpu_info.available
         self._gpu_failures = 0
         self._max_gpu_failures = 3
         
@@ -524,7 +524,7 @@ class CombineService:
             elif self.gpu_info.codec == "h264_videotoolbox":
                 hwaccel = "videotoolbox"
             elif "amf" in self.gpu_info.codec:
-                hwaccel = None
+                hwaccel = "d3d11va"
 
         try:
             self._try_ffmpeg_encode(main_path, overlay_path, out_path, codec, preset, hwaccel, None, use_gpu=use_gpu_codec)
@@ -574,7 +574,7 @@ class CombineService:
         if codec == "h264_nvenc":
             cmd.extend(["-preset", preset, "-rc:v", "vbr", "-cq:v", "28", "-b:v", "0"])
         elif codec == "h264_amf":
-            cmd.extend(["-preset", "balanced", "-quality", "balanced", "-rc", "cqp", "-qmin", "18", "-qmax", "24"])
+            cmd.extend(["-preset", preset, "-quality", "speed", "-rc", "cqp", "-qmin", "18", "-qmax", "24"])
         elif codec == "h264_qsv":
              cmd.extend(["-preset", preset, "-global_quality", "28", "-async_depth", "4"])
         elif codec == "h264_videotoolbox":

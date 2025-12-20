@@ -291,7 +291,6 @@ def main():
         c1, c2 = st.columns(2)
         with c1:
             use_gpu = st.checkbox("Use GPU Acceleration", value=gpu_ok, disabled=not gpu_ok)
-            use_ffmpeg_gpu = st.checkbox("Force FFmpeg GPU", value=False, disabled=not gpu_ok, help="Experimental: Force full GPU piping.")
         with c2:
 
             dry_run = st.checkbox("Dry Run (Test Mode)", value=False)
@@ -315,7 +314,6 @@ def main():
             output_dir=output_path,
             metadata_html=metadata_html_provided,
             use_gpu=use_gpu,
-            use_ffmpeg_gpu=use_ffmpeg_gpu,
 
             verbose=True
         )

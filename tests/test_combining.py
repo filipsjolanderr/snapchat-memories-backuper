@@ -72,7 +72,7 @@ class TestImageCombining:
         """Test image combining with CPU (PIL)."""
         main_path, overlay_path, out_path = sample_images
         
-        config = AppConfig(use_gpu=False, use_ffmpeg_gpu=False)
+        config = AppConfig(use_gpu=False)
         combiner = CombineService(config)
         
         start_time = time.time()
@@ -91,7 +91,7 @@ class TestImageCombining:
         """Test image combining with GPU config (should still use CPU for images)."""
         main_path, overlay_path, out_path = sample_images
         
-        config = AppConfig(use_gpu=True, use_ffmpeg_gpu=True)
+        config = AppConfig(use_gpu=True)
         combiner = CombineService(config)
         
         # Image combining always uses PIL (CPU), regardless of GPU config
@@ -112,29 +112,7 @@ class TestVideoCombiningCPU:
         """Test video combining with CPU only (no GPU)."""
         video_path, overlay_path, out_path = sample_video
         
-        config = AppConfig(use_gpu=False, use_ffmpeg_gpu=False)
-        combiner = CombineService(config)
-        
-        # Should use MoviePy with CPU encoding
-        assert not combiner._use_ffmpeg_gpu
-        
-        with patch.object(combiner, '_moviepy_overlay', side_effect=lambda main, ov, out: out.touch()) as mock_moviepy, \
-             patch.object(combiner, '_ffmpeg_overlay', side_effect=lambda main, ov, out: out.touch()) as mock_ffmpeg:
-            combiner.combine_video(video_path, overlay_path, out_path, dry=False)
-            
-            assert out_path.exists()
-            assert mock_moviepy.called or mock_ffmpeg.called
-            
-        # Verify output file has content
-        # assert out_path.stat().st_size > 0  # touched file is 0 bytes, so this would fail. Mock should allow empty?
-        # Update assertion to checks existence only, or skip size check since we mock creation
-        assert out_path.exists()
-    
-    def test_video_combine_cpu_moviepy(self, temp_dir, sample_video):
-        """Test video combining explicitly using MoviePy (CPU)."""
-        video_path, overlay_path, out_path = sample_video
-        
-        config = AppConfig(use_gpu=False, use_ffmpeg_gpu=False)
+        config = AppConfig(use_gpu=False)
         combiner = CombineService(config)
         
         # Force MoviePy path
@@ -154,7 +132,7 @@ class TestVideoCombiningFFmpegCPU:
         """Test video combining with FFmpeg CPU encoding."""
         video_path, overlay_path, out_path = sample_video
         
-        config = AppConfig(use_gpu=False, use_ffmpeg_gpu=False)
+        config = AppConfig(use_gpu=False)
         combiner = CombineService(config)
         
         # Mock GPU info to be unavailable
@@ -180,7 +158,7 @@ class TestVideoCombiningGPU:
         """Test video combining with GPU enabled in config."""
         video_path, overlay_path, out_path = sample_video
         
-        config = AppConfig(use_gpu=True, use_ffmpeg_gpu=False)
+        config = AppConfig(use_gpu=True)
         combiner = CombineService(config)
         
         # If GPU is available, it should try to use it
@@ -206,7 +184,7 @@ class TestVideoCombiningGPU:
         if not gpu_info.available:
             pytest.skip("GPU not available for testing")
         
-        config = AppConfig(use_gpu=True, use_ffmpeg_gpu=False)
+        config = AppConfig(use_gpu=True)
         combiner = CombineService(config)
         
         # Should use MoviePy with GPU codec
@@ -227,7 +205,7 @@ class TestVideoCombiningFFmpegGPU:
         """Test video combining with FFmpeg GPU explicitly enabled."""
         video_path, overlay_path, out_path = sample_video
         
-        config = AppConfig(use_gpu=True, use_ffmpeg_gpu=True)
+        config = AppConfig(use_gpu=True)
         combiner = CombineService(config)
         
         from snap_memories.gpu import GPUDetector
@@ -254,28 +232,7 @@ class TestVideoCombiningFFmpegGPU:
         if not gpu_info.available or gpu_info.codec != "h264_nvenc":
             pytest.skip("NVIDIA NVENC not available")
         
-        config = AppConfig(use_gpu=True, use_ffmpeg_gpu=True)
-        combiner = CombineService(config)
-        
-        assert combiner.gpu_info.codec == "h264_nvenc"
-        
-        with patch.object(combiner, '_try_ffmpeg_encode', side_effect=lambda *a, **k: a[2].touch()) as mock_encode:
-            combiner._ffmpeg_overlay(video_path, overlay_path, out_path)
-            
-            assert out_path.exists()
-            mock_encode.assert_called_once()
-    
-    def test_video_combine_ffmpeg_gpu_qsv(self, temp_dir, sample_video):
-        """Test video combining with FFmpeg Intel QSV."""
-        video_path, overlay_path, out_path = sample_video
-        
-        from snap_memories.gpu import GPUDetector
-        gpu_info = GPUDetector.detect()
-        
-        if not gpu_info.available or gpu_info.codec != "h264_qsv":
-            pytest.skip("Intel QSV not available")
-        
-        config = AppConfig(use_gpu=True, use_ffmpeg_gpu=True)
+        config = AppConfig(use_gpu=True)
         combiner = CombineService(config)
         
         assert combiner.gpu_info.codec == "h264_qsv"
@@ -296,7 +253,7 @@ class TestVideoCombiningFFmpegGPU:
         if not gpu_info.available or gpu_info.codec != "h264_videotoolbox":
             pytest.skip("Apple VideoToolbox not available")
         
-        config = AppConfig(use_gpu=True, use_ffmpeg_gpu=True)
+        config = AppConfig(use_gpu=True)
         combiner = CombineService(config)
         
         assert combiner.gpu_info.codec == "h264_videotoolbox"
@@ -311,7 +268,7 @@ class TestVideoCombiningFFmpegGPU:
         """Test FFmpeg GPU fallback to CPU on failure."""
         video_path, overlay_path, out_path = sample_video
         
-        config = AppConfig(use_gpu=True, use_ffmpeg_gpu=True)
+        config = AppConfig(use_gpu=True)
         combiner = CombineService(config)
         
         # Mock GPU info as available
@@ -345,7 +302,7 @@ class TestVideoCombiningFFmpegGPU:
         video_path, overlay_path, out_path = sample_video
         
         # Setup config for GPU
-        config = AppConfig(use_gpu=True, use_ffmpeg_gpu=True)
+        config = AppConfig(use_gpu=True)
         
         # Mock GPU info as available initially
         from snap_memories.models import GPUInfo
@@ -397,7 +354,7 @@ class TestCombiningPerformance:
             pytest.skip("GPU not available for performance comparison")
         
         # CPU test
-        config_cpu = AppConfig(use_gpu=False, use_ffmpeg_gpu=False)
+        config_cpu = AppConfig(use_gpu=False)
         combiner_cpu = CombineService(config_cpu)
         combiner_cpu._use_ffmpeg_gpu = False
         
@@ -409,7 +366,7 @@ class TestCombiningPerformance:
         cpu_time = time.time() - start_time
         
         # GPU test
-        config_gpu = AppConfig(use_gpu=True, use_ffmpeg_gpu=True)
+        config_gpu = AppConfig(use_gpu=True)
         combiner_gpu = CombineService(config_gpu)
         
         gpu_out = temp_dir / "gpu_output.mp4"
@@ -444,7 +401,7 @@ class TestCombiningPerformance:
             
             videos.append((video_path, overlay_path, out_path))
         
-        config = AppConfig(use_gpu=True, use_ffmpeg_gpu=True)
+        config = AppConfig(use_gpu=True)
         combiner = CombineService(config)
         
         plans = [

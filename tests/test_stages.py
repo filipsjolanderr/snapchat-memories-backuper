@@ -27,7 +27,6 @@ class MockConfig:
         self.video_workers = 1
         self.metadata_workers = 1
         self.use_gpu = False
-        self.use_ffmpeg_gpu = False
 
 class TestStages(unittest.TestCase):
     def setUp(self):

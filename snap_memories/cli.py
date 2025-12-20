@@ -59,11 +59,6 @@ def main(
         "--use-gpu/--no-gpu",
         help="Enable/disable GPU acceleration",
     ),
-    ffmpeg_gpu: bool = typer.Option(
-        False,
-        "--ffmpeg-gpu",
-        help="Use FFmpeg GPU pipeline for maximum performance",
-    ),
     verbose: bool = typer.Option(
         False,
         "-v",
@@ -119,7 +114,6 @@ def main(
         dry_run=dry_run,
 
         use_gpu=use_gpu,
-        use_ffmpeg_gpu=ffmpeg_gpu,
         verbose=verbose,
         quiet=quiet,
         input_path=input_path_obj.resolve(),
