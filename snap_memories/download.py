@@ -28,10 +28,10 @@ class Downloader:
         output_dir: Path,
         semaphore: asyncio.Semaphore,
         dry_run: bool,
-    ) -> Tuple[bool, MemoryKind]:
-        """Download a single item. Returns (success, kind)."""
+    ) -> Tuple[bool, MemoryKind, Optional[Path]]:
+        """Download a single item. Returns (success, kind, local_path)."""
         if dry_run:
-            return True, item.kind
+            return True, item.kind, None
 
         async with semaphore:
             max_retries = 3
@@ -52,7 +52,7 @@ class Downloader:
 
                         out = output_dir / f"{item.uuid}{ext}"
                         if out.exists():
-                            return True, item.kind
+                            return True, item.kind, out
 
                         # Atomic download: write to .part file first
                         part_file = out.with_suffix(f"{ext}.part")
@@ -83,14 +83,14 @@ class Downloader:
                                         part_file.unlink()
                                     except Exception:
                                         pass
-                                    return True, item.kind
+                                    return True, item.kind, out
 
                             # Atomic rename
                             part_file.replace(out)
                                     
                             # Set file times (sync operation, but fast)
                             _set_file_times(out, item.saved_at_utc)
-                            return True, item.kind
+                            return True, item.kind, out
                             
                         except Exception:
                             # Cleanup partial file on failure
@@ -107,8 +107,8 @@ class Downloader:
                         await asyncio.sleep(0.5 * (attempt + 1))
                     else:
                         warning(f"Failed to download {item.uuid}: {e}")
-                        return False, item.kind
-            return False, item.kind
+                        return False, item.kind, None
+            return False, item.kind, None
 
     async def download_all(
         self, items: List[DownloadItem], output_dir: Path, dry_run: bool
@@ -142,7 +142,7 @@ class Downloader:
             # Use tqdm for progress bar
             for f in tqdm.as_completed(tasks, desc="Downloading", unit="file"):
                 try:
-                    success, kind = await f
+                    success, kind, _ = await f
                     if success:
                         if kind == MemoryKind.IMAGE:
                             imgs += 1

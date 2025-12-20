@@ -123,9 +123,7 @@ class ZipService:
             return 0
         
     def extract_one(self, p: ExtractZipPlan) -> bool:
-        """Extract a single ZIP file atomically. Returns True on success, False on failure/skip."""
-        if p.dest_folder.exists() and any(p.dest_folder.iterdir()):
-            return False  # Skipped
+        """Extract a single ZIP file atomically. Returns True on success, False on failure."""
         
         # Atomic extraction: extract to unique .tmp folder first
         import uuid
@@ -451,7 +449,7 @@ class CombineService:
             return
             
         out_path.parent.mkdir(parents=True, exist_ok=True)
-        tmp_out = out_path.with_suffix(".tmp")
+        tmp_out = out_path.with_suffix(".tmp" + out_path.suffix)
 
         if not overlay_path.exists():
             raise FileNotFoundError(f"Overlay file not found: '{overlay_path.name}'")
@@ -623,8 +621,14 @@ class CombineService:
                  _active_ffmpeg_processes.discard(proc)
                  
             if proc.returncode != 0:
-                error_msg = stderr[:1000] if stderr else "Unknown error"
-                raise RuntimeError(f"FFmpeg failed (codec={codec}): {error_msg}")
+                # FFmpeg stderr can be huge. We want the actual error at the end.
+                msg = ""
+                if stderr:
+                    lines = stderr.strip().split("\n")
+                    msg = "\n".join(lines[-10:])
+                else:
+                    msg = "Unknown error (no stderr output)"
+                raise RuntimeError(f"FFmpeg failed (codec={codec}): {msg}")
                 
         except KeyboardInterrupt:
             if proc:
@@ -668,7 +672,7 @@ class CombineService:
 
         out_path.parent.mkdir(parents=True, exist_ok=True)
         
-        tmp_out = out_path.with_suffix(out_path.suffix + ".tmp")
+        tmp_out = out_path.with_suffix(".tmp" + out_path.suffix)
         
         try:
             # Prefer FFmpeg if available, even for CPU

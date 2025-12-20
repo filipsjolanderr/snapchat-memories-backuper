@@ -111,7 +111,7 @@ class StateManager:
         with self._lock:
             return [
                 s for s in self.state.values() 
-                if s.status not in (ProcessingStatus.COMPLETED, ProcessingStatus.FAILED, ProcessingStatus.SKIPPED)
+                if s.status != ProcessingStatus.COMPLETED
             ]
 
     def get_failed(self) -> list[MemoryState]:

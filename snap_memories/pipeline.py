@@ -64,7 +64,7 @@ class Pipeline:
         
         # 4. Metadata Stage
         meta_stage = MetadataStage(monitor, self.cfg)
-        meta_stage.run()
+        meta_stage.run(output_dir)
 
         # Summary
         failed = monitor.get_failed()
@@ -72,6 +72,12 @@ class Pipeline:
             warning(f"⚠️ {len(failed)} items failed. Check state file for details.")
         else:
             info("✅ All tasks completed successfully!")
+            # 5. State File Cleanup
+            try:
+                if state_file.exists():
+                    state_file.unlink()
+            except Exception as e:
+                verbose(f"Failed to remove state file: {e}")
             
         return 0
 
@@ -184,7 +190,19 @@ class Pipeline:
         
         # Metadata
         meta_stage = MetadataStage(monitor, self.cfg)
-        meta_stage.run()
+        meta_stage.run(output_dir)
 
-        info("Done processing folder.")
+        # Summary
+        failed = monitor.get_failed()
+        if failed:
+            warning(f"⚠️ {len(failed)} items failed. Check folder and state file for details.")
+        else:
+            info("✅ Done processing folder. All tasks completed successfully!")
+            # Cleanup state file on 100% success
+            try:
+                if state_file.exists():
+                    state_file.unlink()
+            except Exception as e:
+                verbose(f"Failed to remove state file: {e}")
+
         return 0

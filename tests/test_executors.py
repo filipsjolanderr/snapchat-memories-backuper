@@ -241,7 +241,7 @@ class TestCombineService(unittest.TestCase):
         # but we can rely on it being called once.
         # Check that it saves to a path ending in .tmp
         args, _ = mock_rgb_image.save.call_args
-        self.assertTrue(str(args[0]).endswith('.tmp'))
+        self.assertTrue(str(args[0]).endswith('.tmp.jpg'))
 
     @patch('snap_memories.executors.subprocess')
     def test_combine_video_dry_run(self, mock_subprocess):

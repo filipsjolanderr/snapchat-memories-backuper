@@ -80,13 +80,13 @@ class TestStateManager(unittest.TestCase):
         mgr.state["c1"] = MemoryState(uuid="c1", url="", status=ProcessingStatus.COMPLETED)
         mgr.state["f1"] = MemoryState(uuid="f1", url="", status=ProcessingStatus.FAILED)
         
-        # Pending should return everything NOT completed/failed/skipped
+        # Pending should return everything NOT completed
         pending = mgr.get_pending()
         uuids = {s.uuid for s in pending}
         self.assertIn("p1", uuids)
         self.assertIn("d1", uuids)
+        self.assertIn("f1", uuids)
         self.assertNotIn("c1", uuids)
-        self.assertNotIn("f1", uuids)
 
 if __name__ == '__main__':
     unittest.main()

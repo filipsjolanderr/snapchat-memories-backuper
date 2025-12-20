@@ -69,7 +69,7 @@ class TestDownloader(unittest.TestCase):
         async def run_test():
              return await self.downloader.download_item(Mock(), item, output_dir, Mock(), dry_run=True)
 
-        success, kind = asyncio.run(run_test())
+        success, kind, actual_path = asyncio.run(run_test())
         
         self.assertTrue(success)
         self.assertEqual(kind, MemoryKind.IMAGE)

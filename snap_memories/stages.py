@@ -58,7 +58,7 @@ class DownloadStage(BaseStage):
         
         to_download = []
         for state in pending_states:
-             if state.status == ProcessingStatus.PENDING:
+             if state.status in (ProcessingStatus.PENDING, ProcessingStatus.FAILED):
                  if state.uuid in uuid_to_item:
                      to_download.append(uuid_to_item[state.uuid])
                  else:
@@ -89,14 +89,14 @@ class DownloadStage(BaseStage):
             async def _process_item(item: DownloadItem):
                 nonlocal processed_since_save
                 try:
-                    success, kind = await self.downloader.download_item(
+                    success, kind, path = await self.downloader.download_item(
                         session, item, output_dir, semaphore, False
                     )
                     if success:
                         self.state_manager.update_status(
                             item.uuid, 
                             ProcessingStatus.DOWNLOADED, 
-                            local_path=output_dir / f"{item.uuid}.{ 'jpg' if kind == MemoryKind.IMAGE else 'mp4' }"
+                            local_path=path
                         )
                     else:
                         self.state_manager.update_status(
@@ -131,30 +131,38 @@ class ExtractionStage(BaseStage):
         self.zipper = ZipService()
 
     def run(self, output_dir: Path):
-        pending = [s for s in self.state_manager.get_pending() if s.status == ProcessingStatus.DOWNLOADED]
-        if not pending:
+        # We also pick up EXTRACTED items for self-healing in case they were advanced incorrectly
+        items = [s for s in self.state_manager.get_pending() if s.status in [ProcessingStatus.DOWNLOADED, ProcessingStatus.EXTRACTED, ProcessingStatus.FAILED]]
+        if not items:
             return
 
-        info(f"📂 processing {len(pending)} items for extraction...")
-        
-        # Group 1: Identify Zips vs Non-Zips
         to_extract = []
         auto_advance = []
 
-        for s in pending:
-            if s.local_path and s.local_path.lower().endswith(".zip") and Path(s.local_path).exists():
+        for s in items:
+            path = Path(s.local_path) if s.local_path else None
+            
+            # Self-healing: if path points to non-existent .mp4/.jpg but .zip exists, use .zip
+            if (not path or not path.exists()) and (output_dir / f"{s.uuid}.zip").exists():
+                path = output_dir / f"{s.uuid}.zip"
+                self.state_manager.update_status(s.uuid, s.status, local_path=path)
+
+            if path and path.exists() and path.suffix.lower() == ".zip":
                 to_extract.append(s)
-            else:
+            elif s.status == ProcessingStatus.DOWNLOADED:
                 auto_advance.append(s)
 
-        # 1. Auto-advance non-zips
-        for s in auto_advance:
-            self.state_manager.update_status(s.uuid, ProcessingStatus.EXTRACTED)
+        if auto_advance:
+            info(f"⏩ Auto-advancing {len(auto_advance)} non-zip items...")
+            for s in auto_advance:
+                self.state_manager.update_status(s.uuid, ProcessingStatus.EXTRACTED)
         
         if not to_extract:
             self.state_manager.save()
             return
-            
+
+        info(f"📂 Processing {len(to_extract)} items for extraction...")
+        
         if self.config.dry_run:
             info(f"[Dry Run] Would extract {len(to_extract)} zips")
             return
@@ -185,7 +193,22 @@ class CombinationStage(BaseStage):
         self.combiner = CombineService(config)
 
     def run(self, output_dir: Path):
-        pending = [s for s in self.state_manager.get_pending() if s.status == ProcessingStatus.EXTRACTED]
+        all_pending = [s for s in self.state_manager.get_pending() if s.status in (ProcessingStatus.EXTRACTED, ProcessingStatus.FAILED)]
+        if not all_pending:
+            return
+
+        pending = []
+        for s in all_pending:
+            # Check if final file already exists in output_dir
+            final_jpg = output_dir / f"{s.uuid}.jpg"
+            final_mp4 = output_dir / f"{s.uuid}.mp4"
+            if final_jpg.exists():
+                self.state_manager.update_status(s.uuid, ProcessingStatus.COMBINED, local_path=final_jpg)
+            elif final_mp4.exists():
+                self.state_manager.update_status(s.uuid, ProcessingStatus.COMBINED, local_path=final_mp4)
+            else:
+                pending.append(s)
+
         if not pending:
             return
 
@@ -206,27 +229,35 @@ class CombinationStage(BaseStage):
             uuid_stem = s.uuid
             sid_stem = s.sid
             
-            # 1. Main check with uuid
-            main_jpg = output_dir / f"{uuid_stem}-main.jpg"
-            main_mp4 = output_dir / f"{uuid_stem}-main.mp4"
-            overlay = output_dir / f"{uuid_stem}-overlay.png"
+            # 1. Main check with uuid (recursive)
+            def _find_file(stem: str, ext: str) -> Optional[Path]:
+                # Try direct first (optimization)
+                direct = output_dir / f"{stem}{ext}"
+                if direct.exists():
+                    return direct
+                # Then recursive (e.g. if extracted to a subfolder)
+                matches = list(output_dir.rglob(f"{stem}{ext}"))
+                if matches:
+                    self.logger.verbose(f"Found {stem}{ext} recursively at: {matches[0]}")
+                    return matches[0]
+                return None
+
+            main_jpg = _find_file(f"{uuid_stem}-main", ".jpg")
+            main_mp4 = _find_file(f"{uuid_stem}-main", ".mp4")
+            overlay = _find_file(f"{uuid_stem}-overlay", ".png")
             
             # 2. Fallback check with sid
-            if not overlay.exists() and sid_stem:
-                sid_main_jpg = output_dir / f"{sid_stem}-main.jpg"
-                sid_main_mp4 = output_dir / f"{sid_stem}-main.mp4"
-                sid_overlay = output_dir / f"{sid_stem}-overlay.png"
-                
-                if sid_overlay.exists():
-                    overlay = sid_overlay
-                    if sid_main_jpg.exists(): main_jpg = sid_main_jpg
-                    elif sid_main_mp4.exists(): main_mp4 = sid_main_mp4
+            if not overlay and sid_stem:
+                # We reuse matches from uuid if found, but if not we search sid
+                main_jpg = main_jpg or _find_file(f"{sid_stem}-main", ".jpg")
+                main_mp4 = main_mp4 or _find_file(f"{sid_stem}-main", ".mp4")
+                overlay = _find_file(f"{sid_stem}-overlay", ".png")
             
             plan = None
-            if overlay.exists():
-                if main_jpg.exists():
+            if overlay and overlay.exists():
+                if main_jpg and main_jpg.exists():
                     plan = CombinePlan(main_path=main_jpg, overlay_path=overlay, out_path=output_dir / f"{uuid_stem}.jpg", kind=MemoryKind.IMAGE)
-                elif main_mp4.exists():
+                elif main_mp4 and main_mp4.exists():
                     plan = CombinePlan(main_path=main_mp4, overlay_path=overlay, out_path=output_dir / f"{uuid_stem}.mp4", kind=MemoryKind.VIDEO)
             
             if plan:
@@ -239,12 +270,12 @@ class CombinationStage(BaseStage):
                 final_path = None
                 if final_jpg.exists(): final_path = final_jpg
                 elif final_mp4.exists(): final_path = final_mp4
-                elif main_jpg.exists():
+                elif main_jpg and main_jpg.exists():
                      try:
                         main_jpg.replace(final_jpg)
                         final_path = final_jpg
                      except: pass
-                elif main_mp4.exists():
+                elif main_mp4 and main_mp4.exists():
                      try:
                         main_mp4.replace(final_mp4)
                         final_path = final_mp4
@@ -300,7 +331,7 @@ class CombinationStage(BaseStage):
 
 
 class MetadataStage(BaseStage):
-    def run(self):
+    def run(self, output_dir: Path):
         pending = [s for s in self.state_manager.get_pending() if s.status == ProcessingStatus.COMBINED]
         if not pending:
             return
@@ -344,6 +375,29 @@ class MetadataStage(BaseStage):
             try:
                 _process_single_file_metadata(p, uuid, ext, meta)
                 self.state_manager.update_status(state.uuid, ProcessingStatus.COMPLETED)
+                
+                # Cleanup original zip and fragments
+                try:
+                    # 1. Zip
+                    zip_path = output_dir / f"{uuid}.zip"
+                    if zip_path.exists():
+                        zip_path.unlink()
+                    
+                    # 2. Fragments (recursive search since they might be in subfolders)
+                    for fragment in output_dir.rglob(f"{uuid}-main.*"):
+                        fragment.unlink()
+                    for fragment in output_dir.rglob(f"{uuid}-overlay.*"):
+                        fragment.unlink()
+                    
+                    # 3. Fallback fragments for sid
+                    if state.sid:
+                        for fragment in output_dir.rglob(f"{state.sid}-main.*"):
+                            fragment.unlink()
+                        for fragment in output_dir.rglob(f"{state.sid}-overlay.*"):
+                            fragment.unlink()
+                except Exception as e:
+                    verbose(f"Cleanup failed for {uuid}: {e}")
+                    
             except Exception as e:
                 self.state_manager.update_status(state.uuid, ProcessingStatus.FAILED, error=f"Metadata failed: {e}")
 
