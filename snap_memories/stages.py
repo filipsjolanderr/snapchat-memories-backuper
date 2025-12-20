@@ -201,15 +201,26 @@ class CombinationStage(BaseStage):
         
         for s in pending:
             # Check if we need to combine
-            # Look for -main and -overlay in output_dir matching this UUID
-            # Or if s.local_path is a zip, we extracted it to output_dir
+            # Look for -main and -overlay in output_dir matching this UUID (or SID)
             
             uuid_stem = s.uuid
+            sid_stem = s.sid
             
-            # Potential files
+            # 1. Main check with uuid
             main_jpg = output_dir / f"{uuid_stem}-main.jpg"
             main_mp4 = output_dir / f"{uuid_stem}-main.mp4"
             overlay = output_dir / f"{uuid_stem}-overlay.png"
+            
+            # 2. Fallback check with sid
+            if not overlay.exists() and sid_stem:
+                sid_main_jpg = output_dir / f"{sid_stem}-main.jpg"
+                sid_main_mp4 = output_dir / f"{sid_stem}-main.mp4"
+                sid_overlay = output_dir / f"{sid_stem}-overlay.png"
+                
+                if sid_overlay.exists():
+                    overlay = sid_overlay
+                    if sid_main_jpg.exists(): main_jpg = sid_main_jpg
+                    elif sid_main_mp4.exists(): main_mp4 = sid_main_mp4
             
             plan = None
             if overlay.exists():
@@ -221,25 +232,14 @@ class CombinationStage(BaseStage):
             if plan:
                 to_combine.append((s, plan))
             else:
-                # If no combination needed, we just need to ensure the final file exists
-                # It might have been a simple download (uuid.jpg)
-                # Or it was extracted but had no overlay (uuid.jpg)
-                # Or it was a main file but no overlay found?
-                
-                # Check if final file exists
+                # Fallback for simple files (no overlay)
                 final_jpg = output_dir / f"{uuid_stem}.jpg"
                 final_mp4 = output_dir / f"{uuid_stem}.mp4"
                 
                 final_path = None
                 if final_jpg.exists(): final_path = final_jpg
                 elif final_mp4.exists(): final_path = final_mp4
-                # specific check for already extracted -main files that don't need overlay?
-                # Actually, usually memories come as X.jpg OR X-main.jpg+X-overlay.png.
-                # If we have X-main.jpg but no overlay, we should probably rename it to X.jpg
                 elif main_jpg.exists():
-                     # Rename? Logic from original planner handles this?
-                     # plan_copy_standalone handles -main without overlay? No, RenameService did.
-                     # Let's handle it here: "Fixing unnamed files" / renaming
                      try:
                         main_jpg.replace(final_jpg)
                         final_path = final_jpg
@@ -247,6 +247,16 @@ class CombinationStage(BaseStage):
                 elif main_mp4.exists():
                      try:
                         main_mp4.replace(final_mp4)
+                        final_path = final_mp4
+                     except: pass
+                elif sid_stem and (output_dir / f"{sid_stem}.jpg").exists():
+                     try:
+                        (output_dir / f"{sid_stem}.jpg").replace(final_jpg)
+                        final_path = final_jpg
+                     except: pass
+                elif sid_stem and (output_dir / f"{sid_stem}.mp4").exists():
+                     try:
+                        (output_dir / f"{sid_stem}.mp4").replace(final_mp4)
                         final_path = final_mp4
                      except: pass
                 elif s.local_path and Path(s.local_path).exists() and not s.local_path.endswith(".zip"):
@@ -307,9 +317,9 @@ class MetadataStage(BaseStage):
                 from .models import MemoryMeta
                 meta = MemoryMeta(
                      uuid=s.uuid,
-                     saved_at_utc=None, # Need to parse back? state stores iso string
-                     latitude=None, 
-                     longitude=None,
+                     saved_at_utc=None, 
+                     latitude=s.latitude, 
+                     longitude=s.longitude,
                      kind=MemoryKind.VIDEO if s.kind == 'video' else MemoryKind.IMAGE
                 )
                 # Parse timestamp

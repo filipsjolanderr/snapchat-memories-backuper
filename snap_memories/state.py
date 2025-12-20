@@ -28,6 +28,7 @@ class MemoryState:
     saved_at_utc: Optional[str] = None  # ISO format
     latitude: Optional[float] = None
     longitude: Optional[float] = None
+    sid: Optional[str] = None
     error_count: int = 0
     last_error: Optional[str] = None
     local_path: Optional[str] = None  # Path to the main file (e.g. .mp4 or .jpg)
@@ -82,7 +83,8 @@ class StateManager:
                         kind=item.kind.value,
                         saved_at_utc=item.saved_at_utc.isoformat() if item.saved_at_utc else None,
                         latitude=item.latitude,
-                        longitude=item.longitude
+                        longitude=item.longitude,
+                        sid=item.sid
                     )
                     added += 1
             if added > 0:

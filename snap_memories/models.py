@@ -58,6 +58,7 @@ class DownloadItem:
     latitude: Optional[float]
     longitude: Optional[float]
     kind: MemoryKind
+    sid: Optional[str] = None
 
 
 @dataclass(frozen=True)

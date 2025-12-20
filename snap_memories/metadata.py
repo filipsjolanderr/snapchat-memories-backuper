@@ -119,6 +119,9 @@ def parse_download_urls_from_html(html_path: Path) -> List[DownloadItem]:
             continue
         uuid = m_mid.group(1)
 
+        m_sid = SID_PATTERN.search(url)
+        sid = m_sid.group(1) if m_sid else None
+
         m_date = re.search(r">(\d{4}-\d{2}-\d{2}[^<]+UTC)<", row)
         if not m_date:
             continue
@@ -155,6 +158,7 @@ def parse_download_urls_from_html(html_path: Path) -> List[DownloadItem]:
                 latitude=lat,
                 longitude=lon,
                 kind=kind,
+                sid=sid
             )
         )
 

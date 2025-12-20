@@ -31,11 +31,11 @@ class TestStateManager(unittest.TestCase):
         # Mock download items (simple objects)
         from collections import namedtuple
         from datetime import datetime, timezone
-        MockItem = namedtuple('MockItem', ['uuid', 'url', 'kind', 'saved_at_utc', 'latitude', 'longitude'])
+        MockItem = namedtuple('MockItem', ['uuid', 'url', 'kind', 'saved_at_utc', 'latitude', 'longitude', 'sid'])
         
         items = [
-            MockItem("uuid1", "http://url1", type("Enum", (), {"value": "image"}), datetime.now(timezone.utc), 1.0, 1.0),
-            MockItem("uuid2", "http://url2", type("Enum", (), {"value": "video"}), None, None, None)
+            MockItem("uuid1", "http://url1", type("Enum", (), {"value": "image"}), datetime.now(timezone.utc), 1.0, 1.0, None),
+            MockItem("uuid2", "http://url2", type("Enum", (), {"value": "video"}), None, None, None, None)
         ]
         
         count = mgr.add_from_downloads(items)
