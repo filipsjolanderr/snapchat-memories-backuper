@@ -334,13 +334,13 @@ def main():
         import snap_memories.pipeline as pm
         
         # Save originals
-        od, oe, om, op = dm.tqdm, em.tqdm, mm.tqdm, pm.tqdm
+        od, oe, om = dm.tqdm, em.tqdm, mm.tqdm
         
         # Patch
         dm.tqdm = StreamlitTqdm
         em.tqdm = StreamlitTqdm
         mm.tqdm = StreamlitTqdm
-        pm.tqdm = StreamlitTqdm
+        # pm.tqdm = StreamlitTqdm # Pipeline does not use tqdm directly
         
         try:
             with st.spinner("Processing..."):
@@ -359,7 +359,7 @@ def main():
             st.error(f"Error: {e}")
         finally:
             # Restore
-            dm.tqdm, em.tqdm, mm.tqdm, pm.tqdm = od, oe, om, op
+            dm.tqdm, em.tqdm, mm.tqdm = od, oe, om
 
 if __name__ == "__main__":
     main()
