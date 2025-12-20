@@ -46,6 +46,7 @@ echo ""
 # Install dependencies
 if [ -f "requirements.txt" ]; then
   echo "Installing required Python packages..."
+  echo "(This takes a minute or two, please wait!)"
   pip install -r requirements.txt --quiet
   if [ $? -ne 0 ]; then
     echo "❌ Failed to install dependencies."
