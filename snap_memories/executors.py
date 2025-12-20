@@ -122,90 +122,102 @@ class ZipService:
                 )
             return 0
         
+    def extract_one(self, p: ExtractZipPlan) -> bool:
+        """Extract a single ZIP file atomically. Returns True on success, False on failure/skip."""
+        if p.dest_folder.exists() and any(p.dest_folder.iterdir()):
+            return False  # Skipped
+        
+        # Atomic extraction: extract to unique .tmp folder first
+        import uuid
+        unique_name = f"{p.zip_path.stem}_{uuid.uuid4().hex[:8]}"
+        tmp_extract_path = p.dest_folder / f".tmp_extract_{unique_name}"
+        
+        try:
+            if tmp_extract_path.exists():
+                shutil.rmtree(tmp_extract_path, ignore_errors=True)
+            
+            tmp_extract_path.mkdir(parents=True, exist_ok=True)
+            
+            with zipfile.ZipFile(p.zip_path, "r") as zf:
+                zf.extractall(tmp_extract_path)
+            
+            # Lock for merging into shared destination
+            with self._merge_lock:
+                p.dest_folder.mkdir(parents=True, exist_ok=True)
+                
+                def _merge_directories(src: Path, dst: Path):
+                    if not dst.exists():
+                        dst.mkdir(parents=True, exist_ok=True)
+                    for item in src.iterdir():
+                        dst_item = dst / item.name
+                        if item.is_dir():
+                            _merge_directories(item, dst_item)
+                        else:
+                            if dst_item.exists():
+                                try:
+                                    if dst_item.is_dir():
+                                        shutil.rmtree(dst_item)
+                                    else:
+                                        dst_item.unlink()
+                                except OSError:
+                                    pass
+                            shutil.move(str(item), str(dst_item))
+
+                for item in tmp_extract_path.iterdir():
+                    dst_path = p.dest_folder / item.name
+                    if item.is_dir():
+                        _merge_directories(item, dst_path)
+                    else:
+                        if dst_path.exists():
+                            try:
+                                if dst_path.is_dir():
+                                    shutil.rmtree(dst_path)
+                                else:
+                                    dst_path.unlink()
+                            except OSError:
+                                pass
+                        shutil.move(str(item), str(dst_path))
+                    
+            # Cleanup
+            shutil.rmtree(tmp_extract_path, ignore_errors=True)
+            return True
+            
+        except Exception as e:
+            warning(f"Failed to extract '{p.zip_path.name}': {e}")
+            if tmp_extract_path.exists():
+                shutil.rmtree(tmp_extract_path, ignore_errors=True)
+            # Re-raise to allow caller to handle error state
+            raise e
+
+    def run(self, plans: List[ExtractZipPlan], dry_run: bool) -> int:
+        if not plans:
+            return 0
+        if dry_run:
+            for p in plans:
+                log_dry_run(
+                    f"would extract '{p.zip_path}' → '{p.dest_folder}'"
+                )
+            return 0
+        
         count = 0
         skipped = 0
         
-        # Helper function for parallel execution
-        def _extract(p: ExtractZipPlan):
-            if p.dest_folder.exists() and any(p.dest_folder.iterdir()):
-                return False  # Skipped
-            
-            # Atomic extraction: extract to unique .tmp folder first
-            # We use a unique name based on the zip filename to avoid collisions between threads
-            # and to allow parallel extraction to the same logical destination parent (if needed, though usually dest is shared)
-            
-            # Use timestamp/uuid to ensure uniqueness even if same zip name exists (unlikely in plan but safe)
-            import uuid
-            unique_name = f"{p.zip_path.stem}_{uuid.uuid4().hex[:8]}"
-            tmp_extract_path = p.dest_folder / f".tmp_extract_{unique_name}"
-            
+        # Helper wrapper for compatibility with existing run logic
+        def _safe_extract(p):
             try:
-                if tmp_extract_path.exists():
-                    shutil.rmtree(tmp_extract_path, ignore_errors=True)
-                
-                tmp_extract_path.mkdir(parents=True, exist_ok=True)
-                
-                with zipfile.ZipFile(p.zip_path, "r") as zf:
-                    zf.extractall(tmp_extract_path)
-                
-                # Lock for merging into shared destination to prevent race conditions
-                # (even though filesystem is theoretically safe, Windows can be flaky with concurrent moves/mkdirs)
-                with self._merge_lock:
-                    p.dest_folder.mkdir(parents=True, exist_ok=True)
-                    
-                    def _merge_directories(src: Path, dst: Path):
-                        if not dst.exists():
-                            dst.mkdir(parents=True, exist_ok=True)
-                        for item in src.iterdir():
-                            dst_item = dst / item.name
-                            if item.is_dir():
-                                _merge_directories(item, dst_item)
-                            else:
-                                if dst_item.exists():
-                                    try:
-                                        if dst_item.is_dir():
-                                            shutil.rmtree(dst_item)
-                                        else:
-                                            dst_item.unlink()
-                                    except OSError:
-                                        pass
-                                shutil.move(str(item), str(dst_item))
-
-                    for item in tmp_extract_path.iterdir():
-                        dst_path = p.dest_folder / item.name
-                        if item.is_dir():
-                            _merge_directories(item, dst_path)
-                        else:
-                            if dst_path.exists():
-                                try:
-                                    if dst_path.is_dir():
-                                        shutil.rmtree(dst_path)
-                                    else:
-                                        dst_path.unlink()
-                                except OSError:
-                                    pass
-                            shutil.move(str(item), str(dst_path))
-                        
-                # Cleanup
-                shutil.rmtree(tmp_extract_path, ignore_errors=True)
-                return True
-                
-            except Exception as e:
-                warning(f"Failed to extract '{p.zip_path.name}': {e}")
-                if tmp_extract_path.exists():
-                    shutil.rmtree(tmp_extract_path, ignore_errors=True)
-                return None  # Failed
+                return self.extract_one(p)
+            except Exception:
+                return None
 
         # Use ThreadPoolExecutor for IO-bound zip extraction
         with ThreadPoolExecutor(max_workers=os.cpu_count() or 4) as executor:
-            futures = {executor.submit(_extract, p): p for p in plans}
+            futures = {executor.submit(_safe_extract, p): p for p in plans}
             for f in tqdm(as_completed(futures), total=len(plans), desc="Extracting ZIPs", unit="zip"):
                 res = f.result()
                 if res is True:
                     count += 1
                 elif res is False:
                     skipped += 1
-
                     
         if skipped > 0:
             verbose(f"Skipped {skipped} already extracted ZIP files")
@@ -223,31 +235,48 @@ class CopyService:
             
         done = 0
         
-        def _copy(p: CopyPlan):
-            if p.dst.exists():
-                return False
+    def copy_one(self, p: CopyPlan) -> bool:
+        """Copy a single file atomically. Returns True on success, False on failure/skip."""
+        if p.dst.exists():
+            return False
+        
+        # Atomic copy
+        tmp_dst = p.dst.with_suffix(p.dst.suffix + ".tmp")
+        try:
+            p.dst.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(p.src, tmp_dst)
             
-            # Atomic copy
-            tmp_dst = p.dst.with_suffix(p.dst.suffix + ".tmp")
+            if p.dst.exists():
+                 tmp_dst.unlink()
+                 return False
+                 
+            tmp_dst.replace(p.dst)
+            return True
+        except Exception as e:
+            warning(f"Failed to copy '{p.src.name}': {e}")
+            if tmp_dst.exists():
+                try: tmp_dst.unlink()
+                except: pass
+            raise e
+
+    def run(self, plans: List[CopyPlan], dry_run: bool, desc: str = "Copying MP4s") -> int:
+        if not plans:
+            return 0
+        if dry_run:
+            for p in plans:
+                log_dry_run(f"would copy '{p.src}' → '{p.dst}'")
+            return len(plans)
+            
+        done = 0
+        
+        def _safe_copy(p):
             try:
-                p.dst.parent.mkdir(parents=True, exist_ok=True)
-                shutil.copy2(p.src, tmp_dst)
-                
-                if p.dst.exists():
-                     tmp_dst.unlink()
-                     return False
-                     
-                tmp_dst.replace(p.dst)
-                return True
-            except Exception as e:
-                warning(f"Failed to copy '{p.src.name}': {e}")
-                if tmp_dst.exists():
-                    try: tmp_dst.unlink()
-                    except: pass
+                return self.copy_one(p)
+            except Exception:
                 return False
 
         with ThreadPoolExecutor(max_workers=os.cpu_count() or 4) as executor:
-            futures = {executor.submit(_copy, p): p for p in plans}
+            futures = {executor.submit(_safe_copy, p): p for p in plans}
             for f in tqdm(as_completed(futures), total=len(plans), desc=desc, unit="file"):
                 if f.result():
                     done += 1
@@ -691,6 +720,20 @@ class CombineService:
                     if c: c.close()
                 except Exception:
                     pass
+
+    def combine_one(self, p: CombinePlan, dry_run: bool) -> bool:
+        """Combine a single item atomically. Returns True on success."""
+        try:
+            if p.kind == MemoryKind.IMAGE:
+                self.combine_image(p.main_path, p.overlay_path, p.out_path, dry_run)
+            else:
+                self.combine_video(p.main_path, p.overlay_path, p.out_path, dry_run)
+            return True
+        except Exception as e:
+            # combine_image/video might raise or handle cleanup. 
+            # We catch here to return status or re-raise if needed.
+            # But the caller (stage) will want the exception message for the state log.
+            raise e
 
     def run(
         self,

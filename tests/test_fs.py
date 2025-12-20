@@ -9,7 +9,7 @@ import shutil
 from pathlib import Path
 
 from snap_memories.fs import (
-    find_zip_files_top_level,
+    find_zip_files_recursively,
     detect_and_fix_zip_files,
     enumerate_main_files,
     split_uuid_and_ext,
@@ -25,16 +25,26 @@ class TestFilesystemUtilities(unittest.TestCase):
         self.temp_dir = Path(tempfile.mkdtemp())
         self.addCleanup(shutil.rmtree, self.temp_dir)
 
-    def test_find_zip_files_top_level(self):
-        """Test finding ZIP files at top level."""
+    def test_find_zip_files_recursively(self):
+        """Test finding ZIP files recursively."""
         # Create test files
         (self.temp_dir / "test1.zip").touch()
         (self.temp_dir / "test2.ZIP").touch()  # Test case insensitivity
         (self.temp_dir / "notzip.txt").touch()
         
-        zips = find_zip_files_top_level(self.temp_dir)
-        self.assertEqual(len(zips), 2)
+        # Recursive check
+        sub = self.temp_dir / "subdir"
+        sub.mkdir()
+        (sub / "nested.zip").touch()
+        
+        zips = find_zip_files_recursively(self.temp_dir)
+        self.assertEqual(len(zips), 3)
         self.assertTrue(all(z.suffix.lower() == ".zip" for z in zips))
+        
+        names = {z.name for z in zips}
+        self.assertIn("test1.zip", names)
+        self.assertIn("test2.ZIP", names)
+        self.assertIn("nested.zip", names)
 
     def test_find_zip_files_by_magic(self):
         """Test finding ZIP files by magic bytes."""
@@ -43,7 +53,7 @@ class TestFilesystemUtilities(unittest.TestCase):
         with open(zip_file, 'wb') as f:
             f.write(b'PK\x03\x04' + b'fake zip content')
         
-        zips = find_zip_files_top_level(self.temp_dir)
+        zips = find_zip_files_recursively(self.temp_dir)
         self.assertIn(zip_file, zips)
 
     def test_detect_and_fix_zip_files(self):

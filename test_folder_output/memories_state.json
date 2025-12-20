@@ -1,0 +1,41 @@
+{
+  "11111111-1111-1111-1111-111111111111": {
+    "uuid": "11111111-1111-1111-1111-111111111111",
+    "url": "",
+    "status": "DOWNLOADED",
+    "kind": "image",
+    "saved_at_utc": null,
+    "latitude": null,
+    "longitude": null,
+    "error_count": 0,
+    "last_error": null,
+    "local_path": "test_folder_input\\11111111-1111-1111-1111-111111111111.zip",
+    "updated_at": 1766265486.779643
+  },
+  "22222222-2222-2222-2222-222222222222": {
+    "uuid": "22222222-2222-2222-2222-222222222222",
+    "url": "",
+    "status": "COMBINED",
+    "kind": "video",
+    "saved_at_utc": null,
+    "latitude": null,
+    "longitude": null,
+    "error_count": 0,
+    "last_error": null,
+    "local_path": "test_folder_input\\22222222-2222-2222-2222-222222222222-main.mp4",
+    "updated_at": 1766265487.0779252
+  },
+  "33333333-3333-3333-3333-333333333333": {
+    "uuid": "33333333-3333-3333-3333-333333333333",
+    "url": "",
+    "status": "COMBINED",
+    "kind": "image",
+    "saved_at_utc": null,
+    "latitude": null,
+    "longitude": null,
+    "error_count": 0,
+    "last_error": null,
+    "local_path": "test_folder_input\\33333333-3333-3333-3333-333333333333.jpg",
+    "updated_at": 1766265486.779643
+  }
+}

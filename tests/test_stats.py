@@ -29,11 +29,12 @@ class TestStatsFunctions(unittest.TestCase):
         (self.temp_dir / "combined_video_combined.mp4").touch()  # Should be excluded
         
         output_folder = self.temp_dir / "output"
-        zips, noext, mp4s, total = count_input_breakdown(self.temp_dir, output_folder)
+        zips, noext, mp4s, imgs, total = count_input_breakdown(self.temp_dir, output_folder)
         
         self.assertEqual(zips, 1)
         self.assertEqual(noext, 1)
         self.assertEqual(mp4s, 1)
+        self.assertEqual(imgs, 0)
         self.assertEqual(total, 3)
 
     def test_count_output_memories(self):
@@ -62,9 +63,3 @@ class TestStatsFunctions(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
-
-
-
-
-
-
