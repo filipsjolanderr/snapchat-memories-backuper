@@ -74,8 +74,10 @@ class DownloadStage(BaseStage):
             return
 
         # 4. Execute Download
-        chunk_size = 50
+        chunk_size = 50 # Unused now for saving, but kept if needed
         processed_since_save = 0
+        import time
+        last_save_time = time.time()
         
         semaphore = asyncio.Semaphore(self.config.download_workers)
         connector = aiohttp.TCPConnector(limit=None, ttl_dns_cache=300)
@@ -113,9 +115,15 @@ class DownloadStage(BaseStage):
                     )
                 
                 processed_since_save += 1
-                if processed_since_save >= chunk_size:
+                
+                # OPTIMIZATION: Save based on time, not just count, to avoid frequent IO on fast connections
+                # Save at most every 2 seconds
+                nonlocal last_save_time
+                now = time.time()
+                if now - last_save_time > 2.0:
                     self.state_manager.save()
-                    processed_since_save = 0
+                    last_save_time = now
+
 
             for item in to_download:
                 tasks.append(_process_item(item))
