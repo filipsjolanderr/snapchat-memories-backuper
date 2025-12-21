@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import asyncio
 from abc import ABC, abstractmethod
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import as_completed
+from .utils import StreamlitThreadPoolExecutor as ThreadPoolExecutor
 from pathlib import Path
 from typing import List
 
@@ -380,21 +381,24 @@ class MetadataStage(BaseStage):
                 try:
                     # 1. Zip
                     zip_path = output_dir / f"{uuid}.zip"
-                    if zip_path.exists():
-                        zip_path.unlink()
+                    try: zip_path.unlink(missing_ok=True)
+                    except: pass
                     
-                    # 2. Fragments (recursive search since they might be in subfolders)
-                    for fragment in output_dir.rglob(f"{uuid}-main.*"):
-                        fragment.unlink()
-                    for fragment in output_dir.rglob(f"{uuid}-overlay.*"):
-                        fragment.unlink()
+                    # 2. Fragments - Direct lookup instead of slow rglob
+                    # We know the possible extensions for main/overlay
+                    for ext in [".jpg", ".mp4", ".png"]:
+                        try: (output_dir / f"{uuid}-main{ext}").unlink(missing_ok=True)
+                        except: pass
+                        try: (output_dir / f"{uuid}-overlay{ext}").unlink(missing_ok=True)
+                        except: pass
                     
                     # 3. Fallback fragments for sid
                     if state.sid:
-                        for fragment in output_dir.rglob(f"{state.sid}-main.*"):
-                            fragment.unlink()
-                        for fragment in output_dir.rglob(f"{state.sid}-overlay.*"):
-                            fragment.unlink()
+                        for ext in [".jpg", ".mp4", ".png"]:
+                            try: (output_dir / f"{state.sid}-main{ext}").unlink(missing_ok=True)
+                            except: pass
+                            try: (output_dir / f"{state.sid}-overlay{ext}").unlink(missing_ok=True)
+                            except: pass
                 except Exception as e:
                     verbose(f"Cleanup failed for {uuid}: {e}")
                     

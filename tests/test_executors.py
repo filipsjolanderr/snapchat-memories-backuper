@@ -199,8 +199,8 @@ class TestCombineService(unittest.TestCase):
     def test_combine_image_real(self, mock_image):
         """Test actual image combining."""
         # Mock PIL Image objects
-        mock_main = Mock()
-        mock_overlay = Mock()
+        mock_main = MagicMock()
+        mock_overlay = MagicMock()
         mock_combined = Mock()
         mock_rgb_image = Mock()
         
@@ -289,14 +289,20 @@ class TestCombineService(unittest.TestCase):
         
         # Create dummy files
         main_path.touch()
-        overlay_path.touch()
+        overlay_path.write_bytes(b'dummy content')
         
         # Mock write_videofile to simulate file creation (needed for atomic rename)
         def mock_write_side_effect(path, *args, **kwargs):
             Path(path).touch()
         mock_final.write_videofile.side_effect = mock_write_side_effect
         
-        service.combine_video(main_path, overlay_path, out_path, dry=False)
+        # We need to mock Image because _is_valid_overlay uses it to verify the file
+        with patch('snap_memories.executors.Image') as mock_image:
+            # Setup image mock to pass verification
+            mock_img_obj = MagicMock()
+            mock_image.open.return_value = mock_img_obj
+            
+            service.combine_video(main_path, overlay_path, out_path, dry=False)
         
         # Verify video processing calls
         mock_video_clip.assert_called_once_with(str(main_path))

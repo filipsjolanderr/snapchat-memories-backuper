@@ -10,7 +10,8 @@ import threading
 import warnings
 import zipfile
 # Add max_workers to ThreadPoolExecutor imports or logic
-from concurrent.futures import ThreadPoolExecutor, as_completed, TimeoutError as FutureTimeoutError
+from concurrent.futures import as_completed, TimeoutError as FutureTimeoutError
+from .utils import StreamlitThreadPoolExecutor as ThreadPoolExecutor
 from pathlib import Path
 from typing import List, Set, Tuple
 
@@ -415,7 +416,7 @@ class CombineService:
             else:
                 rgb.paste(combined)
             
-            rgb.save(tmp_out, "JPEG", quality=95, optimize=True, progressive=True)
+            rgb.save(tmp_out, "JPEG", quality=95, optimize=False, progressive=True)
             if out_path.exists():
                 tmp_out.unlink()
             else:
@@ -442,20 +443,41 @@ class CombineService:
             except: pass
 
 
+    def _get_preset(self, codec: str) -> str:
+        """Get the FFmpeg preset for the given codec."""
+        if codec == "libx264":
+            # "veryfast" is a good balance for backup/archive where speed matters
+            # "ultrafast" is faster but larger files
+            return "veryfast"
+        return "medium"
+
     def _ffmpeg_overlay(
         self, main_path: Path, overlay_path: Path, out_path: Path
     ) -> None:
         codec = "libx264"
         preset = self._get_preset(codec)
-
+        
+        # Calculate optimal threads per FFmpeg process
+        # We want to avoid oversubscribing the CPU
+        # If we have N workers and C cores, threads ≈ C/N
+        import os
+        cpu_count = os.cpu_count() or 4
+        # self.cfg.video_workers is the target concurrency
+        # Ensure at least 1 thread
+        threads = max(1, cpu_count // max(1, self.cfg.video_workers))
+        
         try:
-            self._try_ffmpeg_encode(main_path, overlay_path, out_path, codec, preset, None, None)
+            self._try_ffmpeg_encode(
+                main_path, overlay_path, out_path, 
+                codec, preset, None, None, threads=str(threads)
+            )
         except (subprocess.TimeoutExpired, RuntimeError, subprocess.CalledProcessError) as e:
             raise RuntimeError(f"Encoding failed: {e}") from e
 
     def _try_ffmpeg_encode(
         self, main_path: Path, overlay_path: Path, out_path: Path,
-        codec: str, preset: str, hwaccel: str | None, hwaccel_output_format: str | None
+        codec: str, preset: str, hwaccel: str | None, hwaccel_output_format: str | None,
+        threads: str = "0"
     ) -> None:
         cmd = [get_ffmpeg_path(), "-y"]
         
@@ -489,7 +511,7 @@ class CombineService:
             "-ar", "44100", 
             "-ac", "2",
             "-movflags", "+faststart",
-            "-threads", "0", 
+            "-threads", threads, 
             str(out_path),
         ])
         

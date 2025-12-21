@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import re
 import subprocess
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import as_completed
+from .utils import StreamlitThreadPoolExecutor as ThreadPoolExecutor
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, List, Optional
@@ -292,10 +293,39 @@ def write_png_text_metadata(
         return False
 
 
+
+# Cache exiftool availability
+_exiftool_path: str | None | bool = None
+
+def _is_exiftool_available() -> bool:
+    global _exiftool_path
+    if _exiftool_path is not None:
+        return bool(_exiftool_path)
+    
+    try:
+        subprocess.run(
+            ["exiftool", "-ver"], 
+            stdout=subprocess.DEVNULL, 
+            stderr=subprocess.DEVNULL,
+            check=False
+        )
+        _exiftool_path = True
+        return True
+    except FileNotFoundError:
+        _exiftool_path = False
+        return False
+    except Exception:
+        _exiftool_path = False
+        return False
+
+
 def write_mp4_metadata_exiftool(
     mp4_path: Path, dt: datetime, lat: float | None, lon: float | None
 ) -> bool:
     """Write MP4 metadata using ExifTool (more reliable for GPS location)."""
+    if not _is_exiftool_available():
+        return False
+
     try:
         if not mp4_path.exists():
             return False
@@ -318,8 +348,15 @@ def write_mp4_metadata_exiftool(
             ]
         
         args.append(str(mp4_path))
+        # Windows optimization: prevent popup windows if running from GUI (though we use CLI)
+        startupinfo = None
+        if os.name == 'nt':
+            startupinfo = subprocess.STARTUPINFO()
+            startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+            
         result = subprocess.run(
-            args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=60
+            args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=60,
+            startupinfo=startupinfo
         )
         if result.returncode != 0:
              # Just return status, logging every time is noisy for mass operations

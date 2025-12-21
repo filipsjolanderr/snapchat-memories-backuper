@@ -7,29 +7,33 @@ import os
 from .logger import LogLevel
 
 
+from .utils import (
+    optimize_download_workers,
+    optimize_image_workers,
+    optimize_metadata_workers,
+    optimize_video_workers_cpu,
+)
+
+
 @dataclass(frozen=True)
 class AppConfig:
     dry_run: bool = False
     
     @property
-    def _cpu_count(self) -> int:
-        return os.cpu_count() or 4
-
-    @property
     def image_workers(self) -> int:
-        return self._cpu_count * 4
+        return optimize_image_workers()
 
     @property
     def video_workers(self) -> int:
-        return self._cpu_count * 4
+        return optimize_video_workers_cpu()
 
     @property
     def download_workers(self) -> int:
-        return self._cpu_count * 4
+        return optimize_download_workers()
 
     @property
     def metadata_workers(self) -> int:
-        return self._cpu_count * 4
+        return optimize_metadata_workers()
 
 
     verbose: bool = False

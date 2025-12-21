@@ -110,3 +110,42 @@ def managed_tmp_dir(path: Path, dry_run_flag: bool) -> Iterator[Path]:
         yield path
     finally:
         shutil.rmtree(path, ignore_errors=True)
+
+
+import threading
+from concurrent.futures import ThreadPoolExecutor
+
+class StreamlitThreadPoolExecutor(ThreadPoolExecutor):
+    """
+    A ThreadPoolExecutor that propagates the Streamlit script run context to workers.
+    This prevents 'missing ScriptRunContext' warnings in Streamlit apps.
+    """
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._ctx = None
+        try:
+            # Only attempt to import/get context if we are likely in a streamlit environment
+            # This avoids hard dependency on streamlit in the library
+            import sys
+            if "streamlit" in sys.modules:
+                from streamlit.runtime.scriptrunner import get_script_run_ctx
+                self._ctx = get_script_run_ctx()
+        except (ImportError, ModuleNotFoundError):
+            pass
+
+    def submit(self, fn, *args, **kwargs):
+        if self._ctx:
+            try:
+                from streamlit.runtime.scriptrunner import add_script_run_ctx
+                
+                # Wrap the function to attach context in the worker thread
+                def wrapper(*w_args, **w_kwargs):
+                    add_script_run_ctx(threading.current_thread(), self._ctx)
+                    return fn(*w_args, **w_kwargs)
+                
+                return super().submit(wrapper, *args, **kwargs)
+            except (ImportError, ModuleNotFoundError):
+                # Fallback if import fails mysteriously later
+                return super().submit(fn, *args, **kwargs)
+        else:
+            return super().submit(fn, *args, **kwargs)
