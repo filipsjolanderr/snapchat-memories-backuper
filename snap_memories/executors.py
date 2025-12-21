@@ -31,7 +31,6 @@ warnings.filterwarnings(
 
 from .config import AppConfig
 from .ffmpeg import get_ffmpeg_path
-from .gpu import GPUDetector
 from .logger import dry_run as log_dry_run, verbose, warning
 from .models import CombinePlan, MemoryKind, RenamePlan
 from .models import CopyPlan, ExtractZipPlan
@@ -336,13 +335,6 @@ class RenameService:
 class CombineService:
     def __init__(self, cfg: AppConfig) -> None:
         self.cfg = cfg
-        # Detect GPU if enabled or if we want to determine capabilities
-        # We always try to detect now to support 'auto' behavior
-        try:
-            self.gpu_info = GPUDetector.detect()
-        except Exception:
-            self.gpu_info = None
-        
         # Check if ffmpeg is available
         self.ffmpeg_available = False
         try:
@@ -351,90 +343,9 @@ class CombineService:
         except (subprocess.CalledProcessError, FileNotFoundError):
             self.ffmpeg_available = False
 
-        self._use_ffmpeg_gpu = cfg.use_gpu and self.gpu_info and self.gpu_info.available
-        self._gpu_failures = 0
-        self._max_gpu_failures = 3
-        
-        # Proactively probe if GPU encoding actually works
-        if self._use_ffmpeg_gpu:
-            if not self._probe_gpu_encoding():
-                warning("GPU encoding probe failed (GPU or FFmpeg issue). Falling back to CPU for reliable processing.")
-                self._use_ffmpeg_gpu = False
-
-    def _probe_gpu_encoding(self) -> bool:
-        """
-        Attempt to encode a tiny dummy video frame using the detected GPU codec.
-        Returns True if successful, False otherwise.
-        """
-        try:
-            # Create a minimal filtergraph similar to real usage:
-            # - f=lavfi generates testsrc
-            # - scale (mimicking resize)
-            # - format=yuv420p (pixel format often needed)
-            # This ensures almost the entire pipeline (except file decoding) works.
-            
-            codec = self.gpu_info.codec
-            preset = self._get_preset(codec)
-            hwaccel = None
-            if codec == "h264_nvenc":
-                hwaccel = "cuda"
-            elif codec == "h264_qsv":
-                hwaccel = "qsv"
-            elif codec == "h264_videotoolbox":
-                hwaccel = "videotoolbox"
-
-            cmd = [get_ffmpeg_path(), "-y"]
-            
-            # Note: For synthetic input like testsrc, -hwaccel might not be strictly applicable 
-            # or necessary in the same way as decoding, but we want to test if the encoding side works.
-            # We'll rely on the encoder check mainly.
-            
-            cmd.extend([
-                "-f", "lavfi", "-i", "testsrc=duration=0.1:size=320x240:rate=1",
-                "-c:v", codec
-            ])
-            
-            # Minimal options for speed
-            if codec == "h264_nvenc":
-                cmd.extend(["-preset", "fast"])
-            elif codec == "h264_amf":
-                cmd.extend(["-usage", "transcoding"])
-            elif codec == "libx264": # Should not happen here but safety
-                cmd.extend(["-preset", "ultrafast"])
-
-            cmd.extend([
-                "-frames:v", "1",
-                "-f", "null", "-"
-            ])
-            
-            # Run with short timeout
-            subprocess.run(
-                cmd, 
-                stdout=subprocess.PIPE, 
-                stderr=subprocess.PIPE, 
-                timeout=5, # Should be very fast
-                check=True
-            )
-            return True
-            
-        except (subprocess.CalledProcessError, subprocess.TimeoutExpired, Exception) as e:
-            verbose(f"GPU Probe failed: {e}")
-            return False
-
     def _get_preset(self, codec: str) -> str:
         """Get the appropriate preset for a given codec (optimized for speed)."""
-        if codec == "libx264":
-            return "ultrafast"  # Fastest CPU encoding
-        elif codec == "h264_amf":
-            return "0"  # speed (fastest)
-        elif codec == "h264_nvenc":
-            return "fast"
-        elif codec == "h264_qsv":
-            return "veryfast"
-        elif codec == "h264_videotoolbox":
-            return "fast"
-        else:
-            return "ultrafast"
+        return "ultrafast"
 
     def combine_image(
         self, main_path: Path, overlay_path: Path, out_path: Path, dry: bool
@@ -504,49 +415,17 @@ class CombineService:
     def _ffmpeg_overlay(
         self, main_path: Path, overlay_path: Path, out_path: Path
     ) -> None:
-        
-        use_gpu_codec = (
-            self.gpu_info 
-            and self._use_ffmpeg_gpu 
-            and self.gpu_info.available
-            and self._gpu_failures < self._max_gpu_failures
-        )
-        codec = self.gpu_info.codec if use_gpu_codec else "libx264"
+        codec = "libx264"
         preset = self._get_preset(codec)
 
-        hwaccel = None
-        # Enable hwaccel logic same as before...
-        if use_gpu_codec:
-            if self.gpu_info.codec == "h264_nvenc":
-                hwaccel = "cuda"
-            elif self.gpu_info.codec == "h264_qsv":
-                hwaccel = "qsv"
-            elif self.gpu_info.codec == "h264_videotoolbox":
-                hwaccel = "videotoolbox"
-            elif "amf" in self.gpu_info.codec:
-                hwaccel = "d3d11va"
-
         try:
-            self._try_ffmpeg_encode(main_path, overlay_path, out_path, codec, preset, hwaccel, None, use_gpu=use_gpu_codec)
+            self._try_ffmpeg_encode(main_path, overlay_path, out_path, codec, preset, None, None)
         except (subprocess.TimeoutExpired, RuntimeError, subprocess.CalledProcessError) as e:
-            if use_gpu_codec:
-                self._gpu_failures += 1
-                if self._gpu_failures >= self._max_gpu_failures:
-                    warning(f"GPU encoding failed too many times ({self._gpu_failures}), disabling GPU for future operations.")
-                
-                warning(f"GPU encoding failed for '{main_path.name}', falling back to CPU encoding: {e}")
-                
-                # Retry with CPU
-                try:
-                    self._try_ffmpeg_encode(main_path, overlay_path, out_path, "libx264", "ultrafast", None, None, use_gpu=False)
-                except Exception as cpu_e:
-                    raise RuntimeError(f"Encoding failed (GPU fallover to CPU also failed): {cpu_e}") from e
-            else:
-                raise
+            raise RuntimeError(f"Encoding failed: {e}") from e
 
     def _try_ffmpeg_encode(
         self, main_path: Path, overlay_path: Path, out_path: Path,
-        codec: str, preset: str, hwaccel: str | None, hwaccel_output_format: str | None, use_gpu: bool
+        codec: str, preset: str, hwaccel: str | None, hwaccel_output_format: str | None
     ) -> None:
         cmd = [get_ffmpeg_path(), "-y"]
         
@@ -571,15 +450,7 @@ class CombineService:
         ])
         
         # Optimization flags
-        if codec == "h264_nvenc":
-            cmd.extend(["-preset", preset, "-rc:v", "vbr", "-cq:v", "28", "-b:v", "0"])
-        elif codec == "h264_amf":
-            cmd.extend(["-preset", preset, "-quality", "speed", "-rc", "cqp", "-qmin", "18", "-qmax", "24"])
-        elif codec == "h264_qsv":
-             cmd.extend(["-preset", preset, "-global_quality", "28", "-async_depth", "4"])
-        elif codec == "h264_videotoolbox":
-            cmd.extend(["-preset", preset, "-allow_sw", "1"])
-        elif codec == "libx264":
+        if codec == "libx264":
             cmd.extend(["-preset", preset, "-tune", "fastdecode", "-profile:v", "baseline"])
         
         cmd.extend([
@@ -594,7 +465,7 @@ class CombineService:
         
         proc = None
         try:
-            timeout = 60 if use_gpu else 600
+            timeout = 600
             
             creation_flags = 0
             if platform.system() == "Windows":

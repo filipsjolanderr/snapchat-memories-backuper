@@ -43,16 +43,6 @@ def optimize_video_workers_cpu(cpu_count: int | None = None) -> int:
     return min(max(cpu_count, 2), 16)  # Between 2 and 16 workers
 
 
-def optimize_video_workers_gpu() -> int:
-    """Optimize video worker count for GPU encoding.
-    
-    GPU video encoding is I/O bound, not GPU-core bound.
-    Optimal worker count is typically 4-8 regardless of GPU specs.
-    """
-    # GPU encoding is I/O bound, not GPU-core bound
-    # Most GPUs can handle 4-8 parallel encodings efficiently
-    # More workers don't help much due to GPU memory bandwidth limits
-    return 8
 
 
 def optimize_download_workers(cpu_count: int | None = None) -> int:

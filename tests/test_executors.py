@@ -262,7 +262,7 @@ class TestCombineService(unittest.TestCase):
         """Test actual video combining with MoviePy."""
         # Create service with ffmpeg_gpu disabled AND use_gpu disabled to force MoviePy path
         # (because GPU detection would auto-enable ffmpeg_gpu)
-        cfg = AppConfig(use_gpu=False)
+        cfg = AppConfig()
         service = CombineService(cfg)
         service.ffmpeg_available = False  # Force MoviePy fallback
         

@@ -59,10 +59,3 @@ class DownloadItem:
     longitude: Optional[float]
     kind: MemoryKind
     sid: Optional[str] = None
-
-
-@dataclass(frozen=True)
-class GPUInfo:
-    available: bool
-    codec: str
-    hwaccel: str  # informational

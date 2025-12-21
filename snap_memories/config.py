@@ -31,7 +31,7 @@ class AppConfig:
     def metadata_workers(self) -> int:
         return self._cpu_count * 4
 
-    use_gpu: bool = True
+
     verbose: bool = False
     quiet: bool = False
     # Derived/inputs

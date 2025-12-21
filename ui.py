@@ -16,7 +16,6 @@ except ImportError:
     HAS_TKINTER = False
 
 from snap_memories.config import AppConfig
-from snap_memories.gpu import GPUDetector
 from snap_memories.logger import Logger, LogLevel, set_logger
 from snap_memories.pipeline import Pipeline
 
@@ -125,14 +124,6 @@ class StreamlitLogger(Logger):
         pass 
 
 
-def check_gpu_status() -> tuple[bool, str]:
-    try:
-        gpu_info = GPUDetector.detect()
-        if gpu_info.available:
-            return True, f"GPU Active: {gpu_info.codec} ({gpu_info.hwaccel})"
-        return False, "No GPU detected (Using CPU)"
-    except Exception as e:
-        return False, f"GPU Check Failed: {str(e)}"
 
 
 def get_folder_path() -> Optional[str]:
@@ -283,17 +274,7 @@ def main():
     output_path = Path(st.session_state.output_folder).resolve() if st.session_state.output_folder else None
 
 
-    # -- SETTINGS --
-    with st.expander("⚙️ Advanced Settings"):
-        gpu_ok, gpu_msg = check_gpu_status()
-        st.caption(f"System Status: {gpu_msg}")
-        
-        c1, c2 = st.columns(2)
-        with c1:
-            use_gpu = st.checkbox("Use GPU Acceleration", value=gpu_ok, disabled=not gpu_ok)
-        with c2:
-
-            dry_run = st.checkbox("Dry Run (Test Mode)", value=False)
+    dry_run = st.checkbox("Dry Run (Test Mode)", value=False)
 
 
     # -- RUN BUTTON --
@@ -313,7 +294,6 @@ def main():
             input_path=input_path,
             output_dir=output_path,
             metadata_html=metadata_html_provided,
-            use_gpu=use_gpu,
 
             verbose=True
         )

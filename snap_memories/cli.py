@@ -6,7 +6,6 @@ from pathlib import Path
 import typer
 
 from .config import AppConfig
-from .gpu import GPUDetector
 from .logger import Logger, LogLevel, set_logger, info
 from .pipeline import Pipeline
 
@@ -17,17 +16,6 @@ app = typer.Typer(
 )
 
 
-def _print_gpu_banner(cfg: AppConfig) -> None:
-    """Print GPU availability information."""
-    if not cfg.use_gpu:
-        info("GPU encoding disabled by user")
-        return
-    gpu_info = GPUDetector.detect()
-    if gpu_info.available:
-        mode = "FFmpeg pipeline (auto-enabled)"
-        info(f"GPU available: {gpu_info.codec} ({mode})")
-    else:
-        info("GPU not available, using CPU encoding (libx264)")
 
 
 @app.command()
@@ -54,11 +42,6 @@ def main(
         help="Preview all actions without making changes",
     ),
 
-    use_gpu: bool = typer.Option(
-        True,
-        "--use-gpu/--no-gpu",
-        help="Enable/disable GPU acceleration",
-    ),
     verbose: bool = typer.Option(
         False,
         "-v",
@@ -113,7 +96,6 @@ def main(
     cfg = AppConfig(
         dry_run=dry_run,
 
-        use_gpu=use_gpu,
         verbose=verbose,
         quiet=quiet,
         input_path=input_path_obj.resolve(),
@@ -121,8 +103,6 @@ def main(
         metadata_html=Path(metadata).resolve() if metadata else None,
     )
 
-    # Print GPU banner
-    _print_gpu_banner(cfg)
 
     # Run pipeline
     try:

@@ -9,7 +9,7 @@ from pathlib import Path
 import typer
 from typer.testing import CliRunner
 
-from snap_memories.cli import app, main, _print_gpu_banner
+from snap_memories.cli import app, main
 from snap_memories.config import AppConfig
 
 
@@ -25,10 +25,9 @@ class TestCLI(unittest.TestCase):
         self.assertIsNotNone(app)
 
     @patch('snap_memories.cli.Pipeline')
-    @patch('snap_memories.cli._print_gpu_banner')
     @patch('snap_memories.cli.set_logger')
     @patch('snap_memories.cli.Logger')
-    def test_main_with_html_file(self, mock_logger_class, mock_set_logger, mock_banner, mock_pipeline_class):
+    def test_main_with_html_file(self, mock_logger_class, mock_set_logger, mock_pipeline_class):
         """Test main function with HTML file."""
         # Create a temporary HTML file
         import tempfile
@@ -53,10 +52,9 @@ class TestCLI(unittest.TestCase):
             os.unlink(html_path)
 
     @patch('snap_memories.cli.Pipeline')
-    @patch('snap_memories.cli._print_gpu_banner')
     @patch('snap_memories.cli.set_logger')
     @patch('snap_memories.cli.Logger')
-    def test_main_with_folder(self, mock_logger_class, mock_set_logger, mock_banner, mock_pipeline_class):
+    def test_main_with_folder(self, mock_logger_class, mock_set_logger, mock_pipeline_class):
         """Test main function with folder."""
         import tempfile
         import os
@@ -79,10 +77,9 @@ class TestCLI(unittest.TestCase):
             shutil.rmtree(temp_dir)
 
     @patch('snap_memories.cli.Pipeline')
-    @patch('snap_memories.cli._print_gpu_banner')
     @patch('snap_memories.cli.set_logger')
     @patch('snap_memories.cli.Logger')
-    def test_main_with_dry_run(self, mock_logger_class, mock_set_logger, mock_banner, mock_pipeline_class):
+    def test_main_with_dry_run(self, mock_logger_class, mock_set_logger, mock_pipeline_class):
         """Test main function with dry-run flag."""
         import tempfile
         import os
@@ -107,10 +104,9 @@ class TestCLI(unittest.TestCase):
             os.unlink(html_path)
 
     @patch('snap_memories.cli.Pipeline')
-    @patch('snap_memories.cli._print_gpu_banner')
     @patch('snap_memories.cli.set_logger')
     @patch('snap_memories.cli.Logger')
-    def test_main_with_metadata(self, mock_logger_class, mock_set_logger, mock_banner, mock_pipeline_class):
+    def test_main_with_metadata(self, mock_logger_class, mock_set_logger, mock_pipeline_class):
         """Test main function with metadata option."""
         import tempfile
         import os
@@ -140,10 +136,9 @@ class TestCLI(unittest.TestCase):
 
 
     @patch('snap_memories.cli.Pipeline')
-    @patch('snap_memories.cli._print_gpu_banner')
     @patch('snap_memories.cli.set_logger')
     @patch('snap_memories.cli.Logger')
-    def test_main_invalid_path(self, mock_logger_class, mock_set_logger, mock_banner, mock_pipeline_class):
+    def test_main_invalid_path(self, mock_logger_class, mock_set_logger, mock_pipeline_class):
         """Test main function with invalid path."""
         mock_logger = Mock()
         mock_logger_class.return_value = mock_logger
@@ -155,10 +150,9 @@ class TestCLI(unittest.TestCase):
         mock_pipeline_class.assert_not_called()
 
     @patch('snap_memories.cli.Pipeline')
-    @patch('snap_memories.cli._print_gpu_banner')
     @patch('snap_memories.cli.set_logger')
     @patch('snap_memories.cli.Logger')
-    def test_main_pipeline_error(self, mock_logger_class, mock_set_logger, mock_banner, mock_pipeline_class):
+    def test_main_pipeline_error(self, mock_logger_class, mock_set_logger, mock_pipeline_class):
         """Test main function when pipeline returns error."""
         import tempfile
         import os
@@ -179,34 +173,6 @@ class TestCLI(unittest.TestCase):
         finally:
             os.unlink(html_path)
 
-    @patch('snap_memories.cli.GPUDetector')
-    @patch('snap_memories.cli.info')
-    def test_print_gpu_banner_with_gpu(self, mock_info, mock_gpu_detector):
-        """Test GPU banner printing when GPU is available."""
-        mock_gpu_info = Mock()
-        mock_gpu_info.available = True
-        mock_gpu_info.codec = "h264_nvenc"
-        mock_gpu_detector.detect.return_value = mock_gpu_info
-
-        cfg = AppConfig(
-            input_path=Path("test"),
-            use_gpu=True,
-        )
-        _print_gpu_banner(cfg)
-
-        mock_info.assert_called()
-        mock_gpu_detector.detect.assert_called_once()
-
-    @patch('snap_memories.cli.info')
-    def test_print_gpu_banner_disabled(self, mock_info):
-        """Test GPU banner when GPU is disabled."""
-        cfg = AppConfig(
-            input_path=Path("test"),
-            use_gpu=False,
-        )
-        _print_gpu_banner(cfg)
-
-        mock_info.assert_called_with("GPU encoding disabled by user")
 
 
 if __name__ == '__main__':
