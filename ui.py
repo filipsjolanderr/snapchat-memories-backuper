@@ -58,6 +58,26 @@ class StreamlitTqdm:
             progress = min(self.n / self.total, 1.0)
             self.progress_bar.progress(progress)
         self._update_display()
+
+    @staticmethod
+    def as_completed(fs, timeout=None, total=None, desc=None, unit=None, **kwargs):
+        """
+        Mimic tqdm.asyncio.tqdm.as_completed.
+        It takes a list of awaitables (fs), and yields them as they complete,
+        updating the progress bar.
+        """
+        import asyncio
+        if total is None:
+            total = len(fs)
+        
+        pbar = StreamlitTqdm(total=total, desc=desc, unit=unit)
+        
+        # Use asyncio.as_completed to get an iterator of futures
+        for f in asyncio.as_completed(fs, timeout=timeout):
+            yield f
+            pbar.update()
+        pbar.close()
+
     
     def _update_display(self):
         if self.total > 0:
@@ -309,15 +329,19 @@ def main():
         import snap_memories.download as dm
         import snap_memories.executors as em
         import snap_memories.metadata as mm
-        import snap_memories.pipeline as pm
+        import snap_memories.stages as sm  # <--- IMPORT STAGES
         
         # Save originals
         od, oe, om = dm.tqdm, em.tqdm, mm.tqdm
+        os_std, os_async = sm.std_tqdm, sm.tqdm  # <--- SAVE ORIGINAL STAGES TQDM
         
         # Patch
+        # We patch both std_tqdm and tqdm in stages because it uses both
         dm.tqdm = StreamlitTqdm
         em.tqdm = StreamlitTqdm
         mm.tqdm = StreamlitTqdm
+        sm.std_tqdm = StreamlitTqdm
+        sm.tqdm = StreamlitTqdm
         # pm.tqdm = StreamlitTqdm # Pipeline does not use tqdm directly
         
         try:
@@ -338,6 +362,7 @@ def main():
         finally:
             # Restore
             dm.tqdm, em.tqdm, mm.tqdm = od, oe, om
+            sm.std_tqdm, sm.tqdm = os_std, os_async
 
 if __name__ == "__main__":
     main()

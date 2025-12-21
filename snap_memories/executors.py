@@ -343,13 +343,50 @@ class CombineService:
         except (subprocess.CalledProcessError, FileNotFoundError):
             self.ffmpeg_available = False
 
-    def _get_preset(self, codec: str) -> str:
-        """Get the appropriate preset for a given codec (optimized for speed)."""
-        return "ultrafast"
+    def _is_valid_overlay(self, overlay_path: Path) -> bool:
+        """Check if overlay is a valid image file."""
+        if not overlay_path.exists() or overlay_path.stat().st_size == 0:
+            return False
+        try:
+            with Image.open(overlay_path) as img:
+                img.verify()
+            return True
+        except Exception:
+            return False
+
+    def _fallback_copy(self, main_path: Path, out_path: Path, dry: bool, reason: str) -> None:
+        """Fallback to copying main file when combination fails."""
+        if dry:
+            log_dry_run(f"would copy '{main_path}' → '{out_path}' (fallback: {reason})")
+            return
+            
+        warning(f"Overlay issue: {reason}. Falling back to original.")
+        
+        if out_path.exists():
+            return
+
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        tmp_out = out_path.with_suffix(".tmp" + out_path.suffix)
+        
+        try:
+            shutil.copy2(main_path, tmp_out)
+            if out_path.exists():
+                tmp_out.unlink()
+            else:
+                tmp_out.replace(out_path)
+        except Exception:
+            if tmp_out.exists():
+                try: tmp_out.unlink()
+                except: pass
+            raise
 
     def combine_image(
         self, main_path: Path, overlay_path: Path, out_path: Path, dry: bool
     ) -> None:
+        if not self._is_valid_overlay(overlay_path):
+            self._fallback_copy(main_path, out_path, dry, f"Corrupt/Invalid overlay '{overlay_path.name}'")
+            return
+
         if dry:
             log_dry_run(
                 f"would combine image "
@@ -363,54 +400,47 @@ class CombineService:
         out_path.parent.mkdir(parents=True, exist_ok=True)
         tmp_out = out_path.with_suffix(".tmp" + out_path.suffix)
 
-        if not overlay_path.exists():
-            raise FileNotFoundError(f"Overlay file not found: '{overlay_path.name}'")
+        # Overlay is already verified by _is_valid_overlay check above
         
-        if overlay_path.stat().st_size == 0:
-            raise ValueError(f"Overlay file is empty: '{overlay_path.name}'")
-
         try:
-            test_img = Image.open(overlay_path)
-            test_img.verify() 
-        except Exception as e:
-            # Check for ZIP masquerading as PNG
-            try:
-                with open(overlay_path, "rb") as f:
-                    if f.read(4) == b"PK\x03\x04":
-                         raise ValueError(f"Overlay is a ZIP file: {e}")
-            except Exception:
-                pass
-            raise ValueError(
-                f"Overlay file '{overlay_path.name}' is not a valid image file: {e}"
-            )
+            main = Image.open(main_path).convert("RGBA")
+            overlay = Image.open(overlay_path).convert("RGBA")
+            if overlay.size != main.size:
+                overlay = overlay.resize(main.size, Image.LANCZOS)
+            combined = Image.alpha_composite(main, overlay)
 
-        main = Image.open(main_path).convert("RGBA")
-        overlay = Image.open(overlay_path).convert("RGBA")
-        if overlay.size != main.size:
-            overlay = overlay.resize(main.size, Image.LANCZOS)
-        combined = Image.alpha_composite(main, overlay)
-
-        rgb = Image.new("RGB", combined.size, (255, 255, 255))
-        if combined.mode == "RGBA":
-            rgb.paste(combined, mask=combined.split()[-1])
-        else:
-            rgb.paste(combined)
-        try:
+            rgb = Image.new("RGB", combined.size, (255, 255, 255))
+            if combined.mode == "RGBA":
+                rgb.paste(combined, mask=combined.split()[-1])
+            else:
+                rgb.paste(combined)
+            
             rgb.save(tmp_out, "JPEG", quality=95, optimize=True, progressive=True)
             if out_path.exists():
                 tmp_out.unlink()
             else:
                 tmp_out.replace(out_path)
-        except Exception:
+        except Exception as e:
             if tmp_out.exists():
                 try: tmp_out.unlink()
                 except: pass
-            raise
+            # Fallback on processing error too?
+            # Maybe safer to let unexpected processing errors raise, 
+            # but here we are specifically targeting overlay issues.
+            # If main image is corrupt, we probably can't copy it either or it's garbage.
+            raise e
         finally:
-            main.close()
-            overlay.close()
-            combined.close()
-            rgb.close()
+            # Clean up potentially open resources (handled by context managers mostly now if we used them, 
+            # but Image.open returns object)
+            try: main.close()
+            except: pass
+            try: overlay.close()
+            except: pass
+            try: combined.close()
+            except: pass
+            try: rgb.close()
+            except: pass
+
 
     def _ffmpeg_overlay(
         self, main_path: Path, overlay_path: Path, out_path: Path
@@ -535,6 +565,10 @@ class CombineService:
     def combine_video(
         self, main_path: Path, overlay_path: Path, out_path: Path, dry: bool
     ) -> None:
+        if not self._is_valid_overlay(overlay_path):
+            self._fallback_copy(main_path, out_path, dry, f"Corrupt/Invalid overlay '{overlay_path.name}'")
+            return
+
         if dry:
             log_dry_run(f"would combine video '{main_path}' + '{overlay_path}' → '{out_path}'")
             return
