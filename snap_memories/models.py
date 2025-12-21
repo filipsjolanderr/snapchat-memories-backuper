@@ -34,7 +34,7 @@ class RenamePlan:
 @dataclass(frozen=True)
 class CombinePlan:
     main_path: Path
-    overlay_path: Path
+    overlay_path: Optional[Path]
     out_path: Path
     kind: MemoryKind
 

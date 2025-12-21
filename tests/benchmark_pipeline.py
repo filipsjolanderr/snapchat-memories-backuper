@@ -98,8 +98,21 @@ def test_benchmark_combination(benchmark_env):
             url="",
             status=ProcessingStatus.EXTRACTED,
             kind="image",
-            local_path=str(output_dir / f"{uuid}-main.jpg") # Simulating unpacked path logic
+            local_path=str(output_dir / f"{uuid}-main.jpg") 
         )
+    
+    # Add one simple case (no overlay) to verify fix
+    simple_uuid = "00000000-0000-0000-getSimple-000000000000"
+    (output_dir / f"{simple_uuid}-main.jpg").touch()
+    manager.state[simple_uuid] = MemoryState(
+        uuid=simple_uuid,
+        url="",
+        status=ProcessingStatus.EXTRACTED,
+        kind="image",
+        local_path=str(output_dir / f"{simple_uuid}-main.jpg")
+    )
+    # create_dummy_images doesn't create this one's overlay, so it should trigger fallback logic
+
         
     stage = CombinationStage(manager, cfg)
     

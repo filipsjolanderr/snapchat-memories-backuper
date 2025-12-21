@@ -104,11 +104,13 @@ class Pipeline:
         
         from .utils import iter_files_recursively
         import re
+        from collections import defaultdict
         
         # UUID patterns
         UUID_PATTERN = re.compile(r"([0-9a-fA-F-]{36})")
         
-        discovered_count = 0
+        # Pass 1: Scan and Group
+        files_by_uuid = defaultdict(list)
         
         for dirpath, files in iter_files_recursively(input_folder):
             # Skip output dir if it's inside input
@@ -116,63 +118,91 @@ class Pipeline:
                 continue
                 
             for name in files:
-                p = dirpath / name
                 m = UUID_PATTERN.search(name)
                 if not m:
                     continue
                 
                 uuid_str = m.group(1).lower()
+                files_by_uuid[uuid_str].append(dirpath / name)
                 
-                # Determine state based on file type
-                # .zip -> DOWNLOADED (needs extraction)
-                # -main.xyz -> EXTRACTED (needs combination)
-                # .jpg/.mp4 (no -main) -> COMBINED (needs metadata) or COMPLETED? 
-                # Difficulity: Input folder might be a mess of raw downloads AND processed files.
-                # Only add if not already in state? Or update?
+        discovered_count = 0
+        
+        # Pass 2: Analyze Status
+        for uuid_str, paths in files_by_uuid.items():
+            if uuid_str in monitor.state:
+                continue
                 
-                if uuid_str not in monitor.state:
-                    status = ProcessingStatus.PENDING
-                    kind = "image" # Default, refine below
-                    
-                    lower_name = name.lower()
-                    if lower_name.endswith(".zip"):
-                        status = ProcessingStatus.DOWNLOADED
-                    elif "-main." in lower_name:
-                         # Likely extracted
-                         status = ProcessingStatus.EXTRACTED
-                         kind = "video" if ".mp4" in lower_name else "image"
-                    elif lower_name.endswith(".mp4"):
-                        status = ProcessingStatus.COMBINED
-                        kind = "video"
-                    elif lower_name.endswith((".jpg", ".jpeg", ".png")):
-                        status = ProcessingStatus.COMBINED
-                        kind = "image"
-                    
-                    # Try to get metadata
-                    saved_at = None
-                    lat = None
-                    lon = None
-                    if uuid_str in meta_map:
-                        mm = meta_map[uuid_str]
-                        saved_at = mm.saved_at_utc.isoformat() if mm.saved_at_utc else None
-                        lat = mm.latitude
-                        lon = mm.longitude
-                        if mm.kind: kind = mm.kind.value
+            # Analyze what we have
+            has_zip = any(p.suffix.lower() == ".zip" for p in paths)
+            has_overlay = any("overlay" in p.name.lower() for p in paths)
+            has_main = any("-main" in p.name.lower() for p in paths)
+            
+            # Simple heuristics for "final" files (uuid.jpg / uuid.mp4 without -main)
+            final_files = [p for p in paths if p.name.lower() in (f"{uuid_str}.jpg", f"{uuid_str}.mp4")]
+            has_final = len(final_files) > 0
+            
+            status = ProcessingStatus.PENDING
+            kind = "image"
+            local_path = None
+            
+            # Determine Status Priority
+            if has_zip:
+                # If zip exists, we treat it as DOWNLOADED so it gets extracted 
+                # (unless we decide extracted files are enough, but zip is safer source)
+                status = ProcessingStatus.DOWNLOADED
+                # Find the zip path
+                zip_path = next(p for p in paths if p.suffix.lower() == ".zip")
+                local_path = str(zip_path)
+                
+            elif has_overlay:
+                # If overlay exists, we MUST be in EXTRACTED state to allow combination,
+                # even if we have a "final" looking file (which might just be the raw main file renamed)
+                status = ProcessingStatus.EXTRACTED
+                # Use main file as local_path if possible, else the overlay
+                # But stage usually just needs one path to know it exists. 
+                # Pick the first one.
+                local_path = str(paths[0])
+                
+            elif has_main:
+                # We have -main but no overlay (caught above)? 
+                # Still EXTRACTED, maybe waiting for overlay or simple rename
+                status = ProcessingStatus.EXTRACTED
+                local_path = str(paths[0])
+                
+            elif has_final:
+                # Only final file exists, no zip, no overlay.
+                status = ProcessingStatus.COMBINED
+                local_path = str(final_files[0])
+                if local_path.lower().endswith(".mp4"):
+                    kind = "video"
+                
+            else:
+                # Can't determine?
+                continue
 
-                    # Directly create state since update_status doesn't create
-                    monitor.state[uuid_str] = MemoryState(
-                        uuid=uuid_str,
-                        url="", # Unknown source URL when hydrating from folder
-                        status=status,
-                        kind=kind,
-                        saved_at_utc=saved_at,
-                        latitude=lat,
-                        longitude=lon,
-                        local_path=str(p)
-                    )
-                    monitor._dirty = True
-                    
-                    discovered_count += 1
+            # Attempt to refine kind from metadata
+            saved_at = None
+            lat = None
+            lon = None
+            if uuid_str in meta_map:
+                mm = meta_map[uuid_str]
+                saved_at = mm.saved_at_utc.isoformat() if mm.saved_at_utc else None
+                lat = mm.latitude
+                lon = mm.longitude
+                if mm.kind: kind = mm.kind.value
+
+            monitor.state[uuid_str] = MemoryState(
+                uuid=uuid_str,
+                url="",
+                status=status,
+                kind=kind,
+                saved_at_utc=saved_at,
+                latitude=lat,
+                longitude=lon,
+                local_path=local_path
+            )
+            monitor._dirty = True
+            discovered_count += 1
 
         if discovered_count > 0:
             monitor.save()

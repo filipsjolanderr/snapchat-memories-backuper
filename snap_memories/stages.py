@@ -180,12 +180,68 @@ class ExtractionStage(BaseStage):
         def _process_extract(s: MemoryState):
             if not s.local_path: return
             p = ExtractZipPlan(zip_path=Path(s.local_path), dest_folder=output_dir)
+            
+            # Debug zip content
             try:
-                if self.zipper.extract_one(p):
-                   self.state_manager.update_status(s.uuid, ProcessingStatus.EXTRACTED)
+                import zipfile
+                zp = p.zip_path
+                sz = zp.stat().st_size
+                info(f"DEBUG: Inspecting zip {zp.name} (size: {sz} bytes)")
+                if sz > 0:
+                    try:
+                        with zipfile.ZipFile(zp, 'r') as zf:
+                            info(f"DEBUG: Zip {zp.name} contents: {zf.namelist()}")
+                    except zipfile.BadZipFile:
+                         warning(f"DEBUG: {zp.name} is NOT a valid zip file!")
+            except Exception as e:
+                warning(f"DEBUG: Failed to inspect zip {p.zip_path}: {e}")
+
+            try:
+
+                extracted = self.zipper.extract_one(p)
+                if extracted:
+                    # Renormalization logic:
+                    # Rename extracted files to match UUID if they don't match.
+                    # Files inside zip might be named differently (e.g. random guid-main.mp4)
+                    # We want them to be {s.uuid}-main.mp4 or {s.uuid}-overlay.png
+                    
+                    for fpath in extracted:
+                        info(f"DEBUG: ExtractionStage checking extracted item: {fpath}")
+                        fname = fpath.name
+                        lower_name = fname.lower()
+                        
+                        target_stem = s.uuid
+                        suffix = fpath.suffix.lower()
+                        new_name = None
+                        
+                        if "-main" in lower_name:
+                             new_name = f"{target_stem}-main{suffix}"
+                        elif "-overlay" in lower_name:
+                             new_name = f"{target_stem}-overlay{suffix}"
+                        elif "overlay" in lower_name: # fallback
+                             new_name = f"{target_stem}-overlay{suffix}"
+                        else:
+                             # Assume main if ambiguous and big? Or just main if single file?
+                             # Safest is to treat as main if not overlay
+                             new_name = f"{target_stem}-main{suffix}"
+                        
+                        if new_name and new_name != fname:
+                            try:
+                                new_path = fpath.parent / new_name
+                                # Handle collision unique
+                                if new_path.exists():
+                                    try: new_path.unlink()
+                                    except: pass
+                                fpath.replace(new_path)
+                                info(f"EXTRACT: Renamed {fpath.name} -> {new_name} in {fpath.parent}")
+                            except Exception as e:
+                                warning(f"Failed to rename {fpath.name} to {new_name}: {e}")
+
+                    self.state_manager.update_status(s.uuid, ProcessingStatus.EXTRACTED)
                    # optionally remove zip? kept for safety for now
-                else:
-                    # Skipped usually means already extracted, so we advance
+                elif extracted is not None:
+                    # Not None but empty list (or False in old logic, but extract_one returns list or None now)
+                    # Means skipped/empty.
                     self.state_manager.update_status(s.uuid, ProcessingStatus.EXTRACTED)
             except Exception as e:
                 self.state_manager.update_status(s.uuid, ProcessingStatus.FAILED, error=str(e))
@@ -273,41 +329,84 @@ class CombinationStage(BaseStage):
                 to_combine.append((s, plan))
             else:
                 # Fallback for simple files (no overlay)
-                final_jpg = output_dir / f"{uuid_stem}.jpg"
-                final_mp4 = output_dir / f"{uuid_stem}.mp4"
+                # Create a "Move Loop" plan so it shows up in progress bar
                 
-                final_path = None
-                if final_jpg.exists(): final_path = final_jpg
-                elif final_mp4.exists(): final_path = final_mp4
-                elif main_jpg and main_jpg.exists():
-                     try:
-                        main_jpg.replace(final_jpg)
-                        final_path = final_jpg
-                     except: pass
+                # Determine source and destination
+                uuid_main_jpg = output_dir / f"{uuid_stem}.jpg"
+                uuid_main_mp4 = output_dir / f"{uuid_stem}.mp4"
+                
+                src_path = None
+                dst_path = None
+                kind = MemoryKind.IMAGE
+                
+                if uuid_main_jpg.exists(): 
+                     # Already exists? Update state only? 
+                     # Actually if it exists, logic at start of loop (lines 206-210) should have caught it.
+                     # But if we are here, it means we scanned and found "final" file logic was bypassed or 
+                     # maybe we are looking at fragments.
+                     pass 
+                
+                if main_jpg and main_jpg.exists():
+                    src_path = main_jpg
+                    dst_path = uuid_main_jpg
+                    kind = MemoryKind.IMAGE
                 elif main_mp4 and main_mp4.exists():
-                     try:
-                        main_mp4.replace(final_mp4)
-                        final_path = final_mp4
-                     except: pass
-                elif sid_stem and (output_dir / f"{sid_stem}.jpg").exists():
-                     try:
-                        (output_dir / f"{sid_stem}.jpg").replace(final_jpg)
-                        final_path = final_jpg
-                     except: pass
-                elif sid_stem and (output_dir / f"{sid_stem}.mp4").exists():
-                     try:
-                        (output_dir / f"{sid_stem}.mp4").replace(final_mp4)
-                        final_path = final_mp4
-                     except: pass
-                elif s.local_path and Path(s.local_path).exists() and not s.local_path.endswith(".zip"):
-                    final_path = Path(s.local_path)
-
-                if final_path:
-                    self.state_manager.update_status(s.uuid, ProcessingStatus.COMBINED, local_path=final_path)
+                    src_path = main_mp4
+                    dst_path = uuid_main_mp4
+                    kind = MemoryKind.VIDEO
+                elif sid_stem:
+                    # Check sid fragments
+                     sid_jpg = output_dir / f"{sid_stem}.jpg"
+                     sid_mp4 = output_dir / f"{sid_stem}.mp4"
+                     if sid_jpg.exists():
+                         src_path = sid_jpg
+                         dst_path = uuid_main_jpg
+                         kind = MemoryKind.IMAGE
+                     elif sid_mp4.exists():
+                         src_path = sid_mp4
+                         dst_path = uuid_main_mp4
+                         kind = MemoryKind.VIDEO
+                if s.local_path and Path(s.local_path).exists() and not s.local_path.lower().endswith(".zip"):
+                    # Use local_path as source if it's not a zip (e.g. folder mode direct file)
+                    p = Path(s.local_path)
+                    src_path = p
+                    if p.suffix.lower() == ".mp4":
+                         dst_path = uuid_main_mp4
+                         kind = MemoryKind.VIDEO
+                    else:
+                         dst_path = uuid_main_jpg
+                         kind = MemoryKind.IMAGE
+                
+                if src_path and dst_path:
+                    # Create a "move" plan
+                    plan = CombinePlan(main_path=src_path, overlay_path=None, out_path=dst_path, kind=kind)
+                    to_combine.append((s, plan))
                 else:
                     # Could not find file?
-                    # Maybe extraction failed silently or something else
+                    warning(f"COMBINE: Could not find extracted files for uuid='{uuid_stem}' (len={len(uuid_stem)}). Checked main_jpg={main_jpg}, main_mp4={main_mp4}")
+                    
+                    # Debug strict existence check
+                    mp4_name = f"{uuid_stem}-main.mp4"
+                    mp4_path = output_dir / mp4_name
+                    warning(f"DEBUG: Explicit check {mp4_path} exists? {mp4_path.exists()}")
+                    
+                    # Debug directory listing for matches
+                    matches = list(output_dir.glob(f"*{uuid_stem}*"))
+                    warning(f"DEBUG: Glob *{uuid_stem}* found: {[m.name for m in matches]}")
                     pass
+            
+            # Additional fallback: If we found an overlay but failed to make a plan because main was missing,
+            # check if the "final" file exists and treat it as main (e.g. raw image named as uuid.jpg)
+            if not plan and overlay and overlay.exists():
+                fallback_main = output_dir / f"{uuid_stem}.jpg"
+                if fallback_main.exists():
+                    plan = CombinePlan(main_path=fallback_main, overlay_path=overlay, out_path=output_dir / f"{uuid_stem}.jpg", kind=MemoryKind.IMAGE)
+                    to_combine.append((s, plan))
+                else:
+                    fallback_main_mp4 = output_dir / f"{uuid_stem}.mp4"
+                    if fallback_main_mp4.exists():
+                        plan = CombinePlan(main_path=fallback_main_mp4, overlay_path=overlay, out_path=output_dir / f"{uuid_stem}.mp4", kind=MemoryKind.VIDEO)
+                        to_combine.append((s, plan))
         
         if not to_combine:
             self.state_manager.save()
@@ -357,17 +456,11 @@ class MetadataStage(BaseStage):
                 from .models import MemoryMeta
                 meta = MemoryMeta(
                      uuid=s.uuid,
-                     saved_at_utc=None, 
+                     saved_at_utc=s.saved_at_utc, 
                      latitude=s.latitude, 
                      longitude=s.longitude,
                      kind=MemoryKind.VIDEO if s.kind == 'video' else MemoryKind.IMAGE
                 )
-                # Parse timestamp
-                if s.saved_at_utc:
-                    from datetime import datetime
-                    try:
-                        meta.saved_at_utc = datetime.fromisoformat(s.saved_at_utc)
-                    except: pass
                 
                 # Assuming lat/lon not critically needed or stored in state? 
                 # Implementation plan didn't explicitly add lat/lon to MemoryState to keep it light, 
@@ -382,7 +475,18 @@ class MetadataStage(BaseStage):
         def _apply(args):
             p, uuid, ext, meta, state = args
             try:
-                _process_single_file_metadata(p, uuid, ext, meta)
+                # Debug specific item
+                if uuid.lower().startswith("b9c129eb"):
+                    warning(f"DEBUG STAGE: Processing {uuid}, lat={meta.latitude}, lon={meta.longitude}, path={p}")
+
+                tagged_img, tagged_vid = _process_single_file_metadata(p, uuid, ext, meta)
+                
+                # Double check timestamp even if tagging reported false (fallback)
+                if not (tagged_img or tagged_vid):
+                     from .metadata import _set_file_times
+                     try: _set_file_times(p, meta.saved_at_utc)
+                     except: pass
+                
                 self.state_manager.update_status(state.uuid, ProcessingStatus.COMPLETED)
                 
                 # Cleanup original zip and fragments

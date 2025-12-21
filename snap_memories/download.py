@@ -45,6 +45,8 @@ class Downloader:
                             ext = ".zip"
                         elif "jpeg" in ctype or "jpg" in ctype:
                             ext = ".jpg"
+                        elif "png" in ctype:
+                            ext = ".png"
                         elif "mp4" in ctype or "video" in ctype:
                             ext = ".mp4"
                         else:

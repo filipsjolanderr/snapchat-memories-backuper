@@ -13,7 +13,7 @@ import zipfile
 from concurrent.futures import as_completed, TimeoutError as FutureTimeoutError
 from .utils import StreamlitThreadPoolExecutor as ThreadPoolExecutor
 from pathlib import Path
-from typing import List, Set, Tuple
+from typing import List, Set, Tuple, Optional
 
 # ... imports ...
 from PIL import Image, PngImagePlugin
@@ -123,13 +123,15 @@ class ZipService:
                 )
             return 0
         
-    def extract_one(self, p: ExtractZipPlan) -> bool:
-        """Extract a single ZIP file atomically. Returns True on success, False on failure."""
+    def extract_one(self, p: ExtractZipPlan) -> Optional[List[Path]]:
+        """Extract a single ZIP file atomically. Returns list of extracted paths on success, None on failure."""
         
         # Atomic extraction: extract to unique .tmp folder first
         import uuid
         unique_name = f"{p.zip_path.stem}_{uuid.uuid4().hex[:8]}"
         tmp_extract_path = p.dest_folder / f".tmp_extract_{unique_name}"
+        
+        extracted_paths: List[Path] = []
         
         try:
             if tmp_extract_path.exists():
@@ -139,11 +141,13 @@ class ZipService:
             
             with zipfile.ZipFile(p.zip_path, "r") as zf:
                 zf.extractall(tmp_extract_path)
+                verbose(f"DEBUG_ZIP: Extracted {p.zip_path.name} to {tmp_extract_path}")
             
             # Lock for merging into shared destination
             with self._merge_lock:
                 p.dest_folder.mkdir(parents=True, exist_ok=True)
                 
+                # ... (inner function _merge_directories omitted/kept same)
                 def _merge_directories(src: Path, dst: Path):
                     if not dst.exists():
                         dst.mkdir(parents=True, exist_ok=True)
@@ -162,11 +166,13 @@ class ZipService:
                                     pass
                             shutil.move(str(item), str(dst_item))
 
-                for item in tmp_extract_path.iterdir():
+                items = list(tmp_extract_path.iterdir())
+                verbose(f"DEBUG_ZIP: Found {len(items)} items in temp: {[i.name for i in items]}")
+
+                for item in items:
                     dst_path = p.dest_folder / item.name
                     if item.is_dir():
                         _merge_directories(item, dst_path)
-                    else:
                         if dst_path.exists():
                             try:
                                 if dst_path.is_dir():
@@ -176,10 +182,19 @@ class ZipService:
                             except OSError:
                                 pass
                         shutil.move(str(item), str(dst_path))
-                    
+                        extracted_paths.append(dst_path)
+                    else:
+                        # Handle file
+                        if dst_path.exists():
+                            try: dst_path.unlink()
+                            except: pass
+                        shutil.move(str(item), str(dst_path))
+                        extracted_paths.append(dst_path)
+                        verbose(f"DEBUG_ZIP: Moved {item.name} to {dst_path}")
+            
             # Cleanup
             shutil.rmtree(tmp_extract_path, ignore_errors=True)
-            return True
+            return extracted_paths
             
         except Exception as e:
             warning(f"Failed to extract '{p.zip_path.name}': {e}")
@@ -213,9 +228,9 @@ class ZipService:
             futures = {executor.submit(_safe_extract, p): p for p in plans}
             for f in tqdm(as_completed(futures), total=len(plans), desc="Extracting ZIPs", unit="zip"):
                 res = f.result()
-                if res is True:
+                if res is not None:
                     count += 1
-                elif res is False:
+                else:
                     skipped += 1
                     
         if skipped > 0:
@@ -654,8 +669,27 @@ class CombineService:
                     pass
 
     def combine_one(self, p: CombinePlan, dry_run: bool) -> bool:
-        """Combine a single item atomically. Returns True on success."""
+        """Combine or move a single item atomically. Returns True on success."""
         try:
+            # Handle simple move case (no overlay)
+            if not p.overlay_path:
+                if dry_run:
+                    log_dry_run(f"would move '{p.main_path}' → '{p.out_path}'")
+                    return True
+                
+                if p.out_path.exists():
+                    return True
+                
+                # Try rename first, then copy
+                try:
+                    p.out_path.parent.mkdir(parents=True, exist_ok=True)
+                    p.main_path.replace(p.out_path)
+                except OSError:
+                    shutil.copy2(p.main_path, p.out_path)
+                    try: p.main_path.unlink()
+                    except: pass
+                return True
+
             if p.kind == MemoryKind.IMAGE:
                 self.combine_image(p.main_path, p.overlay_path, p.out_path, dry_run)
             else:

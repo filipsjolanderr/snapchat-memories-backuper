@@ -44,6 +44,7 @@ def parse_memories_html(html_path: Path) -> Dict[str, MemoryMeta]:
 
         m_date = re.search(r">(\d{4}-\d{2}-\d{2}[^<]+UTC)<", row)
         if not m_date:
+            warning(f"Could not parse date from row: {row[:100]}...")
             continue
         date_str = m_date.group(1).strip()
 
@@ -228,6 +229,9 @@ def write_exif_to_jpeg(
     jpeg_path: Path, dt: datetime, lat: float | None, lon: float | None
 ) -> bool:
     try:
+        # debug logs
+        # warning(f"DEBUG: write_exif_to_jpeg {jpeg_path.name} | {dt} | {lat},{lon}")
+        
         if not jpeg_path.exists():
             return False
         
@@ -257,8 +261,8 @@ def write_exif_to_jpeg(
             exif_bytes = piexif.dump(exif_dict)
             piexif.insert(exif_bytes, str(jpeg_path))
             return True
-        except Exception:
-            # Fallback for invalid/weird JPEGs if piexif fails
+        except Exception as e:
+            warning(f"DEBUG: piexif.insert failed for {jpeg_path.name}: {e}")
             pass
             return False
 
@@ -267,7 +271,8 @@ def write_exif_to_jpeg(
         return False
     except OSError:
         return False
-    except Exception:
+    except Exception as e:
+        warning(f"DEBUG: write_exif_to_jpeg failed: {e}")
         return False
 
 
@@ -414,60 +419,94 @@ def _process_single_file_metadata(
     image_tagged = False
     video_tagged = False
     
-    # OPTIMIZATION: Check if file time already matches destination time
-    # If it does, we assume metadata is already applied (resume scenario)
-    try:
-        if p.exists():
-            stat = p.stat()
-            # Check modification time (allow small tolerance for filesystem resolution)
-            if abs(stat.st_mtime - meta.saved_at_utc.timestamp()) < 2.0:
-                return False, False
-    except Exception:
-        pass
+    # Parse date if string
+    dt = meta.saved_at_utc
+    if isinstance(dt, str):
+        try:
+            dt = datetime.fromisoformat(dt)
+        except ValueError:
+            warning(f"Invalid timestamp format for {uuid}: {dt}")
+            dt = None
     
     if ext in ("jpg", "png"):
         try:
             if p.stat().st_size == 0:
                 return False, False
             
-            # OPTIMIZATION: Assume extension is correct first to speed up processing
-            if ext == "jpg" or ext == "jpeg":
-                if write_exif_to_jpeg(p, meta.saved_at_utc, meta.latitude, meta.longitude):
+            if dt and (ext == "jpg" or ext == "jpeg"):
+                if write_exif_to_jpeg(p, dt, meta.latitude, meta.longitude):
                     image_tagged = True
                 else:
                     # Failed? Maybe it's a PNG renamed to JPG?
-                    # Only check if update failed
                     try:
+                        is_png_mask = False
                         with Image.open(p) as img:
                             if img.format == "PNG":
-                                # Handle as PNG
-                                pass # Logic skipped for brevity/speed in common case
-                    except:
+                                is_png_mask = True
+                        
+                        if is_png_mask:
+                           tmp_jpg = p.with_suffix(".fixed.jpg")
+                           
+                           if convert_png_to_jpeg(p, tmp_jpg):
+                               print(f"DEBUG: Converted mask PNG {p.name} to {tmp_jpg.name}")
+                               if write_exif_to_jpeg(tmp_jpg, dt, meta.latitude, meta.longitude):
+                                   print(f"DEBUG: Write EXIF success for {tmp_jpg.name}")
+                                   _set_file_times(tmp_jpg, dt)
+                                   # Replace the original
+                                   try:
+                                       p.unlink()
+                                       tmp_jpg.replace(p)
+                                       print(f"DEBUG: Replaced original {p.name} with fixed JPEG")
+                                       image_tagged = True
+                                   except Exception as e:
+                                       print(f"DEBUG: Failed to replace: {e}")
+                                       pass
+                               else:
+                                   print(f"DEBUG: Write EXIF failed for {tmp_jpg.name}")
+                                   try: tmp_jpg.unlink()
+                                   except: pass
+                           else:
+                               print(f"DEBUG: Convert PNG to JPEG failed for {p.name}")
+                           
+                    except Exception:
                         pass
             elif ext == "png":
-                 # ... existing png logic ...
-                 # Convert PNG to JPEG usually
+                 # Convert PNG to JPEG for standard metadata support
                 base_name = p.stem
                 jpeg_path = p.parent / f"{base_name}.jpg"
+                
+                # Check if JPEG already exists (e.g. from combination)
+                if jpeg_path.exists():
+                     pass # Don't overwrite or duplicate work?
+                
                 if convert_png_to_jpeg(p, jpeg_path):
-                    if write_exif_to_jpeg(
-                        jpeg_path, meta.saved_at_utc, meta.latitude, meta.longitude
-                    ):
-                        image_tagged = True
-                        try:
-                            p.unlink()
-                        except: pass
+                     if dt and write_exif_to_jpeg(
+                         jpeg_path, dt, meta.latitude, meta.longitude
+                     ):
+                         image_tagged = True
+                         try:
+                             p.unlink()
+                         except: pass
                 else:
-                    if write_png_text_metadata(
-                        p, meta.saved_at_utc, meta.latitude, meta.longitude
+                    if dt and write_png_text_metadata(
+                        p, dt, meta.latitude, meta.longitude
                     ):
                         image_tagged = True
 
             # Always update timestamp
-            if image_tagged or p.exists():
-                _set_file_times(p if p.exists() else jpeg_path, meta.saved_at_utc)
+            target_path = p 
+            if not p.exists() and (p.parent / f"{p.stem}.jpg").exists():
+                target_path = p.parent / f"{p.stem}.jpg"
 
-        except Exception:
+            if dt and target_path.exists():
+                try:
+                    _set_file_times(target_path, dt)
+                except: pass
+
+        except Exception as e:
+            import traceback
+            tb = traceback.format_exc()
+            warning(f"Metadata error for {p.name}: {e}\n{tb}")
             pass
 
     elif ext == "mp4":
