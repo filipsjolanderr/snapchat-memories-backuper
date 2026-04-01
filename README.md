@@ -1,3 +1,26 @@
+> [!IMPORTANT]
+> Since Snapchat updated its export format, I recommend my new project: [YellowBox](https://github.com/filipsjolanderr/YellowBox). It is a high-performance, cross-platform desktop app built with Rust 🦀.
+
+# 📸 Snapchat Memories Backuper
+
+A simple tool to **download, restore, and organize your Snapchat Memories**. Note: This tool works on **Windows**. It is not tested on Mac or Linux, but should work.
+
+---
+
+## ✨ Why use this?
+
+- **📥 Downloads Everything**: Grabs all your photos and videos from Snapchat, much faster then doing it in the html file.
+- **📅 Fixes Dates & Locations**: Restores the original date, time, and location for every memory.
+- **🎞️ Combines Automatically**: Automatically merges your overlay text and stickers back into your photos and videos.
+
+---
+
+## 🚀 Easy Start (Recommended)
+
+### 1. Request Your Data
+1. Go to [accounts.snapchat.com](https://accounts.snapchat.com) and log in.
+2. Click **My Data**.
+3. Select **"Export Your Memories"** and choose **"Request Only Memories"**.. It is a high-performance, cross-platform desktop app built with Rust 🦀.
 # 📸 Snapchat Memories Backuper
 
 A simple tool to **download, restore, and organize your Snapchat Memories**. Note: This tool works on **Windows**. It is not tested on Mac or Linux, but should work.
